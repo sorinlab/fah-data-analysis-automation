@@ -3,6 +3,7 @@
 
 
 import logging
+import json
 import os
 import sys
 from config import SCOUT_CONFIGURATION as SC
@@ -42,7 +43,7 @@ FORMATTER = logging.Formatter('%(asctime)s %(message)s')
 
 
 def setup_logger(name, log_file, level=logging.INFO):
-    """Function setup loggers"""
+    """Function to setup loggers"""
 
     handler = logging.FileHandler(log_file)
     handler.setFormatter(FORMATTER)
@@ -64,24 +65,13 @@ if os.path.isfile(LOCK):
     LOG.warning(': [WARNING] Lock set. Exiting...')
     sys.exit()
 else:
-    open(LOCK, mode='a').close()
-    LOG.info(': Scout starting...')
-
-# Based off the scout configuration,
-# determine which data to scout and
-# and make a list out of it
-PROJECTS = SC['projects']
-WORK = []
-for project_name, meta_data in PROJECTS.items():
-    scoutable = meta_data['scoutable']
-    if scoutable:
-        directories = meta_data['directories']
-        for directory, switch in directories.items():
-            if switch:
-                if os.path.isdir(directory):
-                    WORK.append((project_name, directory))
-                else:
-                    ERROR_LOG.info(': [ERROR] The directory %s is a target for scouting but does not exist. Skipping...', directory)
+    try:
+        open(LOCK, mode='a').close()
+        LOG.info(': Scout starting with settings:\n%s', json.dumps(SC, indent=4, separators=(',', ': ')))
+    except IOError as err:
+        ERROR_LOG.info(': [ERROR] I/O Error(%d): %s. Occurred when attempting to set lock=%s. Check the configuration for errors regarding the \'lock\' setting.', err.errno, err.strerror, LOCK)
+        LOG.warning(': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+        sys.exit(1)
 
 # Make a dictionary of all the currently queued WU's
 # This will be used to prevent duplicate queue entries
@@ -89,7 +79,9 @@ QUEUE = SC['queue']
 if os.path.isfile(QUEUE):
     LOG.info(': Opening queue file and creating dictionary.')
 else:
-    ERROR_LOG.info(': [ERROR] The queue file %s does not exist. Check the configuration for errors regarding the \'queue\' setting. Exiting...', QUEUE)
+    ERROR_LOG.info(': [ERROR] The queue file %s does not exist. Check the configuration for errors regarding the \'queue\' setting.', QUEUE)
+    LOG.warning(': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    os.unlink(LOCK)
     sys.exit(1)
 with open(QUEUE, mode='r') as work_queued:
     WORK_QUEUED_LINES = work_queued.readlines()
@@ -109,7 +101,9 @@ WORK_COMPLETED = SC['work_completed']
 if os.path.isfile(WORK_COMPLETED):
     LOG.info(': Opening done (work finished) file and creating dictionary.')
 else:
-    ERROR_LOG.info(': [ERROR] The done (work finished) file %s does not exist. Check the configuration for errors regarding the \'work_completed\' setting. Exiting...', WORK_COMPLETED)
+    ERROR_LOG.info(': [ERROR] The done (work finished) file %s does not exist. Check the configuration for errors regarding the \'work_completed\' setting.', WORK_COMPLETED)
+    LOG.warning(': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    os.unlink(LOCK)
     sys.exit(1)
 with open(WORK_COMPLETED, mode='r') as work_completed_log:
     WORK_COMPLETED_LINES = work_completed_log.readlines()
@@ -122,6 +116,23 @@ for line in WORK_COMPLETED_LINES:
         WORK_COMPLETED_DICT[project_name] = [xtc_path]
 # Deallocate list of finished job entries from memory
 del WORK_COMPLETED_LINES
+
+# Based off the scout configuration,
+# determine which data to scout and
+# and make a list out of it
+PROJECTS = SC['projects']
+WORK = []
+for project_name, meta_data in PROJECTS.items():
+    scoutable = meta_data['scoutable']
+    if scoutable:
+        directories = meta_data['directories']
+        for directory, switch in directories.items():
+            if switch:
+                if os.path.isdir(directory):
+                    WORK.append((project_name, directory))
+                    LOG.info(': Directory=%s marked for scouting.', directory)
+                else:
+                    ERROR_LOG.info(': [ERROR] The directory %s is a target for scouting but does not exist. Skipping...', directory)
 
 # Scout data directories for unanalyzed WU's
 # and make a list out of them
