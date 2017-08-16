@@ -1,3 +1,6 @@
+# Misc. text files
+*.txt
+
 *.pyc
 
 # C extensions
