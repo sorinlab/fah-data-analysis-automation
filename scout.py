@@ -173,8 +173,9 @@ for project_name, directory in WORK:
 # Write enqueue list entries to the queue
 LOG.info(': Writing %d entries to queue.', len(ENQUEUE_LIST))
 with open(QUEUE, mode='a') as queue_file:
-    for item in ENQUEUE_LIST:
-        queue_file.write('{}\n'.format(item))
+    ENQUEUE_LIST.sort(key=lambda x: int(x.split()[1].split('/')[-1].split('.')[0][5:]))
+    for x in xrange(len(ENQUEUE_LIST)):
+        queue_file.write('{}\n'.format(ENQUEUE_LIST[x]))
 
 # Release lock and exit
 os.unlink(LOCK)
