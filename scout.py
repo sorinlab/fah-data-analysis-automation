@@ -67,10 +67,13 @@ if os.path.isfile(LOCK):
 else:
     try:
         open(LOCK, mode='a').close()
-        LOG.info(': Scout starting with settings:\n%s', json.dumps(SC, indent=4, separators=(',', ': ')))
+        LOG.info(': Scout starting with settings:\n%s',
+                 json.dumps(SC, indent=4, separators=(',', ': ')))
     except IOError as err:
-        ERROR_LOG.info(': [ERROR] I/O Error(%d): %s. Occurred when attempting to set lock=%s. Check the configuration for errors regarding the \'lock\' setting.', err.errno, err.strerror, LOCK)
-        LOG.warning(': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+        ERROR_LOG.info(
+            ': [ERROR] I/O Error(%d): %s. Occurred when attempting to set lock=%s. Check the configuration for errors regarding the \'lock\' setting.', err.errno, err.strerror, LOCK)
+        LOG.warning(
+            ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
         sys.exit(1)
 
 # Make a dictionary of all the currently queued WU's
@@ -79,12 +82,22 @@ QUEUE = SC['queue']
 if os.path.isfile(QUEUE):
     LOG.info(': Opening queue file and creating dictionary.')
 else:
-    ERROR_LOG.info(': [ERROR] The queue file %s does not exist. Check the configuration for errors regarding the \'queue\' setting.', QUEUE)
-    LOG.warning(': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    ERROR_LOG.info(
+        ': [ERROR] The queue file %s does not exist. Check the configuration for errors regarding the \'queue\' setting.', QUEUE)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
     os.unlink(LOCK)
     sys.exit(1)
-with open(QUEUE, mode='r') as work_queued:
-    WORK_QUEUED_LINES = work_queued.readlines()
+try:
+    with open(QUEUE, mode='r') as work_queued:
+        WORK_QUEUED_LINES = work_queued.readlines()
+except IOError as err:
+    ERROR_LOG.info(
+        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. Check the configuration for errors regarding the \'queue\' setting.', err.errno, err.strerror, QUEUE)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    os.unlink(LOCK)
+    sys.exit(1)
 WORK_QUEUED_DICT = {}
 for line in WORK_QUEUED_LINES:
     (project_name, xtc_path) = line.split()
@@ -101,12 +114,22 @@ WORK_COMPLETED = SC['work_completed']
 if os.path.isfile(WORK_COMPLETED):
     LOG.info(': Opening done (work finished) file and creating dictionary.')
 else:
-    ERROR_LOG.info(': [ERROR] The done (work finished) file %s does not exist. Check the configuration for errors regarding the \'work_completed\' setting.', WORK_COMPLETED)
-    LOG.warning(': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    ERROR_LOG.info(
+        ': [ERROR] The done (work finished) file %s does not exist. Check the configuration for errors regarding the \'work_completed\' setting.', WORK_COMPLETED)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
     os.unlink(LOCK)
     sys.exit(1)
-with open(WORK_COMPLETED, mode='r') as work_completed_log:
-    WORK_COMPLETED_LINES = work_completed_log.readlines()
+try:
+    with open(WORK_COMPLETED, mode='r') as work_completed_log:
+        WORK_COMPLETED_LINES = work_completed_log.readlines()
+except IOError as err:
+    ERROR_LOG.info(
+        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open work_completed=%s. Check the configuration for errors regarding the \'work_completed\' setting.', err.errno, err.strerror, WORK_COMPLETED)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    os.unlink(LOCK)
+    sys.exit(1)
 WORK_COMPLETED_DICT = {}
 for line in WORK_COMPLETED_LINES:
     (project_name, xtc_path) = line.split()
@@ -132,7 +155,8 @@ for project_name, meta_data in PROJECTS.items():
                     WORK.append((project_name, directory))
                     LOG.info(': Directory=%s marked for scouting.', directory)
                 else:
-                    ERROR_LOG.info(': [ERROR] The directory %s is a target for scouting but does not exist. Skipping...', directory)
+                    ERROR_LOG.info(
+                        ': [ERROR] The directory %s is a target for scouting but does not exist. Skipping...', directory)
 
 # Scout data directories for unanalyzed WU's
 # and make a list out of them
@@ -160,7 +184,8 @@ for project_name, directory in WORK:
         for f in files:
             if f.endswith(".xtc"):
                 xtc_path = os.path.abspath(os.path.join(root, f))
-                # Skip WU's that are either queued or finished, otherwise mark them
+                # Skip WU's that are either queued or finished, otherwise mark
+                # them
                 if xtc_path in project_completed_xtcs:
                     pass
                 else:
@@ -172,10 +197,42 @@ for project_name, directory in WORK:
 
 # Write enqueue list entries to the queue
 LOG.info(': Writing %d entries to queue.', len(ENQUEUE_LIST))
-with open(QUEUE, mode='a') as queue_file:
-    ENQUEUE_LIST.sort(key=lambda x: int(x.split()[1].split('/')[-1].split('.')[0][5:]))
-    for x in xrange(len(ENQUEUE_LIST)):
-        queue_file.write('{}\n'.format(ENQUEUE_LIST[x]))
+try:
+    with open(QUEUE, mode='a') as queue_file:
+        for item in ENQUEUE_LIST:
+            queue_file.write('{}\n'.format(item))
+except IOError as err:
+    ERROR_LOG.info(
+        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. Check the configuration for errors regarding the \'queue\' setting.', err.errno, err.strerror, QUEUE)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    os.unlink(LOCK)
+    sys.exit(1)
+
+LOG.info(': Sorting the queue.')
+try:
+    with open(QUEUE, mode='r') as queue_file:
+        WQL = queue_file.readlines()
+    WQL.sort(key=lambda x: int(x.split()[1].split('/')[-1].split('.')[0][5:]))
+except IOError as err:
+    ERROR_LOG.info(
+        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. This error is unexpected and could mean that the queue was deleted intermittently.', err.errno, err.strerror, QUEUE)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    os.unlink(LOCK)
+    sys.exit(1)
+try:
+    with open(QUEUE, mode='w') as queue_file:
+        for x in xrange(len(WQL)):
+            queue_file.write(WQL[x])
+    LOG.info(': Finished sorting the queue.')
+except IOError as err:
+    ERROR_LOG.info(
+        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. This error is unexpected and could mean that the queue was deleted intermittently.', err.errno, err.strerror, QUEUE)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    os.unlink(LOCK)
+    sys.exit(1)
 
 # Release lock and exit
 os.unlink(LOCK)
