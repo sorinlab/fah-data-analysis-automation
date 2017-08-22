@@ -1,6 +1,7 @@
 #!/usr/bin/perl
-use DBI; 
-$updated = "08-17-17"; 
+use DBI;
+use JSON qw( );
+$updated = "08-17-17";
 
 # Perl trim function to remove whitespace from the start and end of the string
 sub trim($) {
@@ -8,6 +9,21 @@ sub trim($) {
 	$string =~ s/^\s+|\s+$//g;
 	return $string;
 }
+
+#######################	"Import" Configuration ############################
+my $analyzer_config = '/.../analyzer_conf.json';
+
+my $json_text = do {
+   open(my $json_fh, "<:encoding(UTF-8)", $analyzer_config)
+      or die("Can't open \$analyzer_config\": $!\n");
+   local $/;
+   <$json_fh>
+};
+
+my $json = JSON->new;
+my $config_data = $json->decode($json_text);
+die;
+# To-Do: Implement below...
 
 #######################	setup I/O ############################
 # Dirs #
@@ -305,7 +321,7 @@ foreach (@queue_lines) {
 				$Npi{$ii} = 0;
 				$Ncoil{$ii} = 0;
 			}
-			unless(open(DSSP,"<" $sstmp)) {
+			unless(open(DSSP,"<", $sstmp)) {
 				print LOGFILE "[ERROR] When attempting to open $sstmp for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close(LOG);
 				system("rm $lock");
