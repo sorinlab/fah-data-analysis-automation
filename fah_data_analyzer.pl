@@ -305,7 +305,7 @@ foreach (@queue_lines) {
 				$Npi{$ii} = 0;
 				$Ncoil{$ii} = 0;
 			}
-			unless(open(DSSP,"<" $sstmp)) {
+			unless(open(DSSP,"<", $sstmp)) {
 				print LOGFILE "[ERROR] When attempting to open $sstmp for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close(LOG);
 				system("rm $lock");
