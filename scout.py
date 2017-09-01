@@ -165,21 +165,17 @@ for project_name, meta_data in PROJECTS.items():
 # therefore marking them for analysis
 ENQUEUE = deque()
 for project_name, directory in WORK:
-    directory_walk = os.walk(directory)
+    directory_walk = os.walk(directory, topdown=True)
     for root, _, files in directory_walk:
-        if not files:
-            continue
-        xtcs = [xtc for xtc in files if xtc.endswith(".xtc")]
-        for f in xtcs:
-            # if f.endswith(".xtc"):
-            xtc_path = os.path.abspath(os.path.join(root, f))
-            # Skip WU's that are either queued or finished, otherwise mark
-            # them
-            if xtc_path in CONTINUE_SET:
-                continue
-            else:
-                ENQUEUE.appendleft(
-                    '{:<10}\t{:<}'.format(project_name, xtc_path))
+        for f in files:
+            if f.endswith(".xtc"):
+                xtc_path = os.path.abspath(os.path.join(root, f))
+                # Skip WU's that are either queued or finished, otherwise mark
+                # them
+                if xtc_path in CONTINUE_SET:
+                    continue
+                else:
+                    ENQUEUE.appendleft('{:<10}\t{:<}'.format(project_name, xtc_path))
 
 # Write enqueue list entries to the queue
 LOG.info(': Writing %d entries to queue.', len(ENQUEUE))
