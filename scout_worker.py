@@ -10,6 +10,7 @@ import sys
 from collections import deque
 from config import SCOUT_CONFIGURATION as SC
 
+# Obtain arguments passed by the wrapper
 ARGUMENT_PARSER = argparse.ArgumentParser()
 ARGUMENT_PARSER.add_argument('codename')
 ARGUMENT_PARSER.add_argument('directory')
@@ -38,7 +39,7 @@ def setup_logger(name, log_file, level=logging.INFO):
 LOG = setup_logger('log', SC['log'])
 ERROR_LOG = setup_logger('error_log', SC['error_log'])
 
-# Load object from pickle
+# Load set object from pickle
 try:
     with open(PICKLE_PATH, mode='rb') as pkl:
         CONTINUE_SET = pickle.load(pkl)
@@ -49,7 +50,7 @@ except IOError as err:
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
     sys.exit(1)
 
-# Scout data directories for unanalyzed WU's
+# Scout a data directory for unanalyzed WU's
 # and make a queue out of them
 # This queue will be used to write into the queue file,
 # therefore marking them for analysis
@@ -59,8 +60,7 @@ for root, _, files in DIRECTORY_WALK:
     for f in files:
         if f.endswith(".xtc"):
             xtc_path = os.path.abspath(os.path.join(root, f))
-            # Skip WU's that are either queued or finished, otherwise mark
-            # them
+            # Skip WU's that are either queued or finished, otherwise mark them
             if xtc_path in CONTINUE_SET:
                 continue
             else:
@@ -69,7 +69,7 @@ for root, _, files in DIRECTORY_WALK:
 # Write enqueue list entries to the queue
 QUEUE = SC['queue']
 LOCK = '{}/worker_lock.txt'.format(os.path.dirname(QUEUE))
-# Check for the existance of a worker lock
+## Check for the existance of a worker lock
 while os.path.isfile(LOCK):
     continue
 try:
@@ -119,6 +119,6 @@ except IOError as err:
     os.unlink(LOCK)
     sys.exit(1)
 
-# Release lock and exit
+# Release worker lock and exit
 os.unlink(LOCK)
 LOG.info(': Worker finished and its lock unset.')

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-''' The F@H Analysis-Work Scouter'''
+''' The F@H Analysis-Work Scout'''
 
 
 import logging
@@ -107,7 +107,7 @@ for line in WORK_QUEUED_LINES:
 # Deallocate list of queue entries from memory
 del WORK_QUEUED_LINES
 
-# Make a dictionary of all the finished WU's
+# Make a set of all the finished WU's
 # This will be used to prevent reentering WU's into queue
 WORK_COMPLETED = SC['work_completed']
 if os.path.isfile(WORK_COMPLETED):
@@ -139,18 +139,22 @@ del WORK_COMPLETED_LINES
 # Take union of work completed and queue to make a set of "ignorables"
 CONTINUE_SET = WORK_QUEUED_SET.union(WORK_COMPLETED_SET)
 
-
 # Deallocate work completed/queued sets
 del WORK_COMPLETED, WORK_QUEUED_SET
 
 PICKLE_PATH = '{}/CONTINUE_SET.pkl'.format(os.path.dirname(LOCK))
-if os.path.isfile(PICKLE_PATH):
+try:
     os.unlink(PICKLE_PATH)
-    with open(PICKLE_PATH, mode='wb') as cs_pickle:
-        pickle.dump(CONTINUE_SET, cs_pickle)
-else:
-    with open(PICKLE_PATH, mode='wb') as cs_pickle:
-        pickle.dump(CONTINUE_SET, cs_pickle)
+except OSError as _:
+    try:
+        with open(PICKLE_PATH, mode='wb') as cs_pickle:
+            pickle.dump(CONTINUE_SET, cs_pickle)
+    except IOError as err:
+        ERROR_LOG.info(
+            ': [ERROR] I/O Error(%d): %s. Occurred when attempting to dump pickle=%s.', err.errno, err.strerror, WORK_COMPLETED)
+        LOG.warning(
+            ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+        sys.exit(1)
 
 # Based off the scout configuration,
 # determine which data to scout and
@@ -188,4 +192,3 @@ for process in PROCESSES:
 LOG.info(': All workers have terminated. Removing lock and exiting...')
 os.unlink(PICKLE_PATH)
 os.unlink(LOCK)
-
