@@ -186,4 +186,6 @@ for process in PROCESSES:
     else:
         LOG.info(': Scout worker terminated successfully.')
 LOG.info(': All workers have terminated. Removing lock and exiting...')
+os.unlink(PICKLE_PATH)
 os.unlink(LOCK)
+
