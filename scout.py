@@ -6,6 +6,7 @@ import logging
 import json
 import os
 import sys
+from collections import deque
 from config import SCOUT_CONFIGURATION as SC
 
 # Sample configuration ###
@@ -101,10 +102,10 @@ except IOError as err:
 WORK_QUEUED_DICT = {}
 for line in WORK_QUEUED_LINES:
     (project_name, xtc_path) = line.split()
-    if project_name in WORK_QUEUED_DICT:
-        WORK_QUEUED_DICT[project_name].append(xtc_path)
-    else:
-        WORK_QUEUED_DICT[project_name] = [xtc_path]
+    try:
+        WORK_QUEUED_DICT[project_name].add(xtc_path)
+    except KeyError as _:
+        WORK_QUEUED_DICT[project_name] = set([xtc_path])
 # Deallocate list of queue entries from memory
 del WORK_QUEUED_LINES
 
@@ -133,10 +134,11 @@ except IOError as err:
 WORK_COMPLETED_DICT = {}
 for line in WORK_COMPLETED_LINES:
     (project_name, xtc_path) = line.split()
-    if project_name in WORK_COMPLETED_DICT:
-        WORK_COMPLETED_DICT[project_name].append(xtc_path)
-    else:
-        WORK_COMPLETED_DICT[project_name] = [xtc_path]
+    try:
+        WORK_COMPLETED_DICT[project_name].add(xtc_path)
+    except KeyError as _:
+        WORK_COMPLETED_DICT[project_name] = set([xtc_path])
+
 # Deallocate list of finished job entries from memory
 del WORK_COMPLETED_LINES
 
@@ -159,25 +161,26 @@ for project_name, meta_data in PROJECTS.items():
                         ': [ERROR] The directory %s is a target for scouting but does not exist. Skipping...', directory)
 
 # Scout data directories for unanalyzed WU's
-# and make a list out of them
-# This list will be used to write into the queue file,
+# and make a queue out of them
+# This queue will be used to write into the queue file,
 # therefore marking them for analysis
-ENQUEUE_LIST = []
+ENQUEUE = deque()
 for project_name, directory in WORK:
     # Determine if the project name has entries
     # in the work finished file
-    # If so, obtain the list of completed WU's for that project
+    # If so, obtain the set of completed WU's for that project
     if project_name in WORK_COMPLETED_DICT:
         project_completed_xtcs = WORK_COMPLETED_DICT[project_name]
     else:
-        project_completed_xtcs = []
+        project_completed_xtcs = set([])
     # Determine if the project name has entires
     # in the queue file
     # If so, obtain the list of WU's queued for that project
     if project_name in WORK_QUEUED_DICT:
         project_queued_xtcs = WORK_QUEUED_DICT[project_name]
     else:
-        project_queued_xtcs = []
+        project_queued_xtcs = set([])
+    pass_set = project_completed_xtcs.union(project_queued_xtcs)
     # Perform scouting and marking WU's for analysis
     directory_walk = os.walk(directory)
     for root, _, files in directory_walk:
@@ -186,20 +189,17 @@ for project_name, directory in WORK:
                 xtc_path = os.path.abspath(os.path.join(root, f))
                 # Skip WU's that are either queued or finished, otherwise mark
                 # them
-                if xtc_path in project_completed_xtcs:
+                if xtc_path in pass_set:
                     pass
                 else:
-                    if xtc_path in project_queued_xtcs:
-                        pass
-                    else:
-                        ENQUEUE_LIST.append(
-                            '{:<10}\t{:<}'.format(project_name, xtc_path))
+                    ENQUEUE.appendleft(
+                        '{:<10}\t{:<}'.format(project_name, xtc_path))
 
 # Write enqueue list entries to the queue
-LOG.info(': Writing %d entries to queue.', len(ENQUEUE_LIST))
+LOG.info(': Writing %d entries to queue.', len(ENQUEUE))
 try:
     with open(QUEUE, mode='a') as queue_file:
-        for item in ENQUEUE_LIST:
+        for item in ENQUEUE:
             queue_file.write('{}\n'.format(item))
 except IOError as err:
     ERROR_LOG.info(
@@ -212,7 +212,7 @@ except IOError as err:
 LOG.info(': Sorting the queue.')
 try:
     with open(QUEUE, mode='r') as queue_file:
-        WQL = queue_file.readlines()
+        WQL = list(set(queue_file.readlines()))
     WQL.sort(key=lambda x: int(x.split()[1].split('/')[-1].split('.')[0][5:]))
 except IOError as err:
     ERROR_LOG.info(
