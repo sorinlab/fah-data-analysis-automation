@@ -77,7 +77,7 @@ else:
             ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
         sys.exit(1)
 
-# Make a dictionary of all the currently queued WU's
+# Make a set of all the currently queued WU's
 # This will be used to prevent duplicate queue entries
 QUEUE = SC['queue']
 if os.path.isfile(QUEUE):
@@ -99,13 +99,10 @@ except IOError as err:
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
     os.unlink(LOCK)
     sys.exit(1)
-WORK_QUEUED_DICT = {}
+WORK_QUEUED_SET = set()
 for line in WORK_QUEUED_LINES:
-    (project_name, xtc_path) = line.split()
-    try:
-        WORK_QUEUED_DICT[project_name].add(xtc_path)
-    except KeyError as _:
-        WORK_QUEUED_DICT[project_name] = set([xtc_path])
+    (_, xtc_path) = line.split()
+    WORK_QUEUED_SET.add(xtc_path)
 # Deallocate list of queue entries from memory
 del WORK_QUEUED_LINES
 
@@ -131,16 +128,18 @@ except IOError as err:
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
     os.unlink(LOCK)
     sys.exit(1)
-WORK_COMPLETED_DICT = {}
+WORK_COMPLETED_SET = set()
 for line in WORK_COMPLETED_LINES:
-    (project_name, xtc_path) = line.split()
-    try:
-        WORK_COMPLETED_DICT[project_name].add(xtc_path)
-    except KeyError as _:
-        WORK_COMPLETED_DICT[project_name] = set([xtc_path])
-
+    (_, xtc_path) = line.split()
+    WORK_COMPLETED_SET.add(xtc_path)
 # Deallocate list of finished job entries from memory
 del WORK_COMPLETED_LINES
+
+# Take union of work completed and queue to make a set of "ignorables"
+CONTINUE_SET = WORK_QUEUED_SET.union(WORK_COMPLETED_SET)
+
+# Deallocate work completed/queued sets
+del WORK_COMPLETED, WORK_QUEUED_SET
 
 # Based off the scout configuration,
 # determine which data to scout and
@@ -166,34 +165,21 @@ for project_name, meta_data in PROJECTS.items():
 # therefore marking them for analysis
 ENQUEUE = deque()
 for project_name, directory in WORK:
-    # Determine if the project name has entries
-    # in the work finished file
-    # If so, obtain the set of completed WU's for that project
-    if project_name in WORK_COMPLETED_DICT:
-        project_completed_xtcs = WORK_COMPLETED_DICT[project_name]
-    else:
-        project_completed_xtcs = set([])
-    # Determine if the project name has entires
-    # in the queue file
-    # If so, obtain the list of WU's queued for that project
-    if project_name in WORK_QUEUED_DICT:
-        project_queued_xtcs = WORK_QUEUED_DICT[project_name]
-    else:
-        project_queued_xtcs = set([])
-    pass_set = project_completed_xtcs.union(project_queued_xtcs)
-    # Perform scouting and marking WU's for analysis
     directory_walk = os.walk(directory)
     for root, _, files in directory_walk:
-        for f in files:
-            if f.endswith(".xtc"):
-                xtc_path = os.path.abspath(os.path.join(root, f))
-                # Skip WU's that are either queued or finished, otherwise mark
-                # them
-                if xtc_path in pass_set:
-                    pass
-                else:
-                    ENQUEUE.appendleft(
-                        '{:<10}\t{:<}'.format(project_name, xtc_path))
+        if not files:
+            continue
+        xtcs = [xtc for xtc in files if xtc.endswith(".xtc")]
+        for f in xtcs:
+            # if f.endswith(".xtc"):
+            xtc_path = os.path.abspath(os.path.join(root, f))
+            # Skip WU's that are either queued or finished, otherwise mark
+            # them
+            if xtc_path in CONTINUE_SET:
+                continue
+            else:
+                ENQUEUE.appendleft(
+                    '{:<10}\t{:<}'.format(project_name, xtc_path))
 
 # Write enqueue list entries to the queue
 LOG.info(': Writing %d entries to queue.', len(ENQUEUE))
