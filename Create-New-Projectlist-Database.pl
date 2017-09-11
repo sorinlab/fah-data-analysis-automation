@@ -16,3 +16,12 @@ print "Database connection established\n";
 $statement = $dbh->prepare("CREATE DATABASE ProjectList");
 $statement->execute;
 print "New ProjectList Database created";
+
+# Now create a new Projectlist Table under the Projectlist Database
+$statement = $dbh->prepare("USE ProjectList");
+$statement = $dbh->execute;
+$statement = $dbh->prepare("CREATE TABLE ProjectList
+                            (  
+                              projNum INT NOT NULL,
+                              codeName VARCHAR(10) NOT NULL,
+                              ")
