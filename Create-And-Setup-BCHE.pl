@@ -9,8 +9,6 @@ use DBI;
 $input = "\n     Usage\:  Create-And-Setup-BCHE.pl  Project_Name\n\n";
 $name = shift(@ARGV) or die "$input";
 
-# CREATE TABLE BCHE(    proj INT NOT NULL,    run INT NOT NULL,    clone INT NOT NULL,    frame INT NOT NULL,    rmsd_pro FLOAT,    rmsd_complex FLOAT,    COMdist FLOAT,    rg_pro FLOAT,    E_vdw FLOAT,    E_qq FLOAT,    dssp VARCHAR(550),     Nhelix INT,     Nbeta INT,     Ncoil INT,     acquired DATETIME,    dateacquried DATE,    timeacquired TIME,    PRIMARY KEY (proj, run, clone, frame));
-
 # Connecting to the Database Server Hosted by Banana
 $dbserver = "localhost";
 my $dbh = DBI->connect("DBI:mysql:mysql:$dbserver",server,"") or print STDERR "Can't connect to mysql database on $dbserver\nTry giving this server permissions\n";
