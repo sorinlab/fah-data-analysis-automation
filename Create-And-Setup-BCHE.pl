@@ -19,11 +19,12 @@ $statement = $dbh->prepare("CREATE DATABASE BCHE");
 $statement->execute;
 print "New Database created with the name BCHE";
 
-# Now create a new Table with the Project_Name
+# Now create a new Table with the Project_Name inside this new Database
 $statement = $dbh->prepare("USE BCHE");
 $statement = $dbh->execute;
 $statement = $dbh->prepare("CREATE TABLE BCHE
-                            ( proj INT NOT NULL, 
+                            ( 
+                              proj INT NOT NULL, 
                               run INT NOT NULL, 
                               clone INT NOT NULL, 
                               frame INT NOT NULL, 
