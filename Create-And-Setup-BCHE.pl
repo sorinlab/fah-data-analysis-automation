@@ -16,12 +16,12 @@ print "Database connection established\n";
 
 # Once Connected, create a new database with the Project_Name
 $statement = $dbh->prepare("CREATE DATABASE BCHE");
-$statement->execute;
-print "New Database created with the name BCHE";
+$statement->execute();
+print "New Database created with the name BCHE\n";
 
 # Now create a new Table with the Project_Name inside this new Database
 $statement = $dbh->prepare("USE BCHE");
-$statement = $dbh->execute;
+$statement = $dbh->execute();
 $statement = $dbh->prepare("CREATE TABLE BCHE
                             ( 
                               proj INT NOT NULL, 
@@ -43,5 +43,5 @@ $statement = $dbh->prepare("CREATE TABLE BCHE
                               PRIMARY KEY (proj, run, clone, frame)
                             )"
                           );
-$statement = $dbh->execute;
+$statement = $dbh->execute();
 print "New Table created with the name $name";
