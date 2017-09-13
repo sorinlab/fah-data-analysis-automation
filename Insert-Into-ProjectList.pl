@@ -8,9 +8,9 @@ $input = "\n     Usage\:  Insert-Into-ProjectList.pl \n\n";
 
 ########## Please Update the following variables to suit your Project #########
 $projectNumber = 8020;
-$codeName = "BCHE";
-$databaseServer = "ProjectList";
-$server = "Folding1";
+$codeName = "'BCHE'";
+$databaseServer = "'ProjectList'";
+$server = "'Folding1'";
 $temperature = 100.00;
 $numberOfRun = 100;
 $numberOfClone = 100;
