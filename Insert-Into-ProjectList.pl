@@ -49,9 +49,7 @@ $statement = $dbh->prepare("INSERT INTO ProjectList
                                         $temperature,
                                         $numberOfRun,
                                         $numberOfClone,
-                                        $numberOfAtoms,
-                                        $description
-                                    )"
+                                        $numberOfAtoms,$description)"
                             );
 $statement->execute();
 print "Inserted the new Project into the Database.\n\n";
