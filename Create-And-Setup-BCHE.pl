@@ -10,7 +10,7 @@ $input = "\n     Usage\:  Create-And-Setup-BCHE.pl \n\n";
 
 
 # Connecting to the Database Server Hosted by Banana
-$dbserver = "localhost";
+$dbserver = "134.139.52.4:3306";
 my $dbh = DBI->connect("DBI:mysql:mysql:$dbserver",server,"") or print STDERR "Can't connect to mysql database on $dbserver\nTry giving this server permissions\n";
 print "Database connection established\n";
 
