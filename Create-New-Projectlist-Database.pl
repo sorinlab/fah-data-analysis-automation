@@ -26,11 +26,10 @@ $statement = $dbh->prepare("CREATE TABLE ProjectList
                               projType VARCHAR(10) NOT NULL,
                               dbServer VARCHAR(100) NOT NULL,
                               server VARCHAR(50) NOT NULL,
-                              temperature DOUBLE(3,2),
                               numRun INT,
                               numClone INT,
                               numAtoms INT,
-                              description VARCHAR(500),
+                              description VARCHAR(100),
                               PRIMARY KEY (projNum)
                             )"
                           );

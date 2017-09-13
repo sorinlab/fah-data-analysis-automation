@@ -5,7 +5,7 @@
 
 use DBI;
 $input = "\n     Usage\:  Insert-Into-ProjectList.pl [projectNumber]\n\n";
-$name = @ARGV[0] or die "$input";
+$projectNumber = @ARGV[0] or die "$input";
 
 
 
