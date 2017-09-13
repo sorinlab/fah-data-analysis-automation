@@ -15,7 +15,7 @@ $temperature = 100.00;
 $numberOfRun = 100;
 $numberOfClone = 100;
 $numberOfAtoms = 100;
-$description = "This is the Project 8020 of BCHE.";
+$description = "'This is the Project 8020 of BCHE.'";
 ########### END of Variables to suit your Project ##############################
 
 
@@ -50,7 +50,7 @@ $statement = $dbh->prepare("INSERT INTO ProjectList
                                         $numberOfRun,
                                         $numberOfClone,
                                         $numberOfAtoms,
-                                        $description"
+                                        $description
                                     )"
                             );
 $statement->execute();
