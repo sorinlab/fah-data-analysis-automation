@@ -50,7 +50,7 @@ $statement = $dbh->prepare("INSERT INTO ProjectList
                                         $numberOfRun,
                                         $numberOfClone,
                                         $numberOfAtoms,
-                                        "$description"
+                                        $description"
                                     )"
                             );
 $statement->execute();
