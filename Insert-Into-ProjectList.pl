@@ -38,8 +38,7 @@ $statement = $dbh->prepare("INSERT INTO ProjectList
                                         $temperature,
                                         $numberOfRun,
                                         $numberOfClone,
-                                        $numberOfAtoms,
-                                        $description
+                                        $numberOfAtoms
                                     )"
                             );
 $statement->execute();
