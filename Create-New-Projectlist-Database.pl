@@ -19,7 +19,7 @@ print "New ProjectList Database created\n";
 
 # Now create a new Projectlist Table under the Projectlist Database
 $statement = $dbh->prepare("USE ProjectList");
-$statement = $dbh->execute();
+$statement->execute();
 $statement = $dbh->prepare("CREATE TABLE ProjectList
                             (  
                               projNum INT NOT NULL,
@@ -34,6 +34,6 @@ $statement = $dbh->prepare("CREATE TABLE ProjectList
                               PRIMARY KEY (projNum)
                             )"
                           );
-$statement = $dbh->execute();
+$statement->execute();
 print "New ProjectList table created.";
                             
