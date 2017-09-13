@@ -41,6 +41,7 @@ $statement = $dbh->prepare("CREATE TABLE BCHE
                               dateacquried DATE, 
                               timeacquired TIME, 
                               PRIMARY KEY (proj, run, clone, frame)
-                            )");
+                            )"
+                          );
 $statement = $dbh->execute;
 print "New Table created with the name $name";

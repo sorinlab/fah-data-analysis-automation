@@ -24,4 +24,16 @@ $statement = $dbh->prepare("CREATE TABLE ProjectList
                             (  
                               projNum INT NOT NULL,
                               codeName VARCHAR(10) NOT NULL,
-                              ")
+                              dbServer VARCHAR(100) NOT NULL,
+                              server VARCHAR(50) NOT NULL,
+                              temperature DOUBLE(3,2),
+                              numRun INT,
+                              numClone INT,
+                              numAtoms INT,
+                              description VARCHAR(500),
+                              PRIMARY KEY (projNum)
+                            )"
+                          );
+$statement = $dbh->execute;
+print "New ProjectList table created.";
+                            
