@@ -7,7 +7,7 @@ use DBI;
 $input = "\n     Usage\:  Insert-Into-ProjectList.pl \n\n";
 
 ########## Please Update the following variables to suit your Project #########
-$projectNumber = "8020";
+$projectNumber = 8020;
 $codeName = "BCHE";
 $databaseServer = "ProjectList";
 $server = "Folding1";
