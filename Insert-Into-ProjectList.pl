@@ -40,7 +40,7 @@ $statement = $dbh->prepare ("INSERT INTO ProjectList
                                         $numberOfClone,
                                         $numberOfAtoms,
                                         $description
-                                    )"
+                                    );"
                             );
 $statement->execute();
 print "Inserted the new Project into the Database.\n\n";
