@@ -14,16 +14,16 @@ print "Database connection established\n";
 
 # Once Connected, create a new ProjectList Database
 $statement = $dbh->prepare("CREATE DATABASE ProjectList");
-$statement->execute();
+$statement->execute() or die "Could not create ProjectList Database: " . $statement->errstr();
 print "New ProjectList Database created\n";
 
 # Now create a new Projectlist Table under the Projectlist Database
 $statement = $dbh->prepare("USE ProjectList");
-$statement->execute();
+$statement->execute() or die "Could not use ProjectList Database: " . $statement->errstr();
 $statement = $dbh->prepare("CREATE TABLE ProjectList
                             (  
                               projNum INT NOT NULL,
-                              codeName VARCHAR(10) NOT NULL,
+                              projType VARCHAR(10) NOT NULL,
                               dbServer VARCHAR(100) NOT NULL,
                               server VARCHAR(50) NOT NULL,
                               temperature DOUBLE(3,2),
@@ -34,6 +34,6 @@ $statement = $dbh->prepare("CREATE TABLE ProjectList
                               PRIMARY KEY (projNum)
                             )"
                           );
-$statement->execute();
+$statement->execute() or die "Could not create ProjectList table: " . $statement->errstr();
 print "New ProjectList table created.\n\n";
                             

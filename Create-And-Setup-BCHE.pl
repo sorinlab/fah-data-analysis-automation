@@ -8,6 +8,8 @@
 use DBI;
 $input = "\n     Usage\:  Create-And-Setup-BCHE.pl \n\n";
 
+# Name of the Database/Table here
+$name = "BCHE";
 
 # Connecting to the Database Server Hosted by Banana
 $dbserver = "134.139.52.4:3306";
@@ -15,14 +17,14 @@ my $dbh = DBI->connect("DBI:mysql:mysql:$dbserver",server,"") or print STDERR "C
 print "Database connection established\n";
 
 # Once Connected, create a new database with the Project_Name
-$statement = $dbh->prepare("CREATE DATABASE BCHE");
-$statement->execute();
-print "New Database created with the name BCHE\n";
+$statement = $dbh->prepare("CREATE DATABASE $name");
+$statement->execute() or die "Could not create $name Database: " . $statement->errstr();
+print "New Database created with the name $name\n";
 
 # Now create a new Table with the Project_Name inside this new Database
-$statement = $dbh->prepare("USE BCHE");
-$statement->execute();
-$statement = $dbh->prepare("CREATE TABLE BCHE
+$statement = $dbh->prepare("USE $name");
+$statement->execute() or die "Could not use Database $name: " . $statement->errstr();
+$statement = $dbh->prepare("CREATE TABLE $name
                             ( 
                               proj INT NOT NULL, 
                               run INT NOT NULL, 
@@ -43,5 +45,5 @@ $statement = $dbh->prepare("CREATE TABLE BCHE
                               PRIMARY KEY (proj, run, clone, frame)
                             )"
                           );
-$statement->execute();
+$statement->execute() or die "Could not create $name table: " . $statement->errstr();
 print "New Table created with the name $name \n\n";
