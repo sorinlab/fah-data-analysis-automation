@@ -28,7 +28,7 @@ print "Database connection established\n";
 # Once Connected, Insert Specific Project into the ProjectList
 $statement = $dbh->prepare("USE ProjectList");
 $statement->execute();
-$statement = $dbh->prepare ("INSERT INTO ProjectList 
+$statement = $dbh->prepare("INSERT INTO ProjectList 
                                 VALUES
                                     (
                                         $projectNumber,
@@ -40,7 +40,7 @@ $statement = $dbh->prepare ("INSERT INTO ProjectList
                                         $numberOfClone,
                                         $numberOfAtoms,
                                         $description
-                                    );"
+                                    )"
                             );
 $statement->execute();
 print "Inserted the new Project into the Database.\n\n";
