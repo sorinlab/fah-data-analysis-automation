@@ -44,4 +44,4 @@ $statement = $dbh->prepare("CREATE TABLE BCHE
                             )"
                           );
 $statement->execute();
-print "New Table created with the name $name \n";
+print "New Table created with the name $name \n\n";

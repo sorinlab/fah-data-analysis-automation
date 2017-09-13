@@ -35,5 +35,5 @@ $statement = $dbh->prepare("CREATE TABLE ProjectList
                             )"
                           );
 $statement->execute();
-print "New ProjectList table created.\n";
+print "New ProjectList table created.\n\n";
                             
