@@ -10,6 +10,8 @@ $projectNumber = @ARGV[0] or die "$input";
 
 $projectXML = $projectNumber . ".xml";
 
+$projectNumber = substr $projectNumber, 4;
+
 $databaseServer = "'banana'";
 $server = "'Folding1'";
 
@@ -39,7 +41,7 @@ if($projectFinder == 0)
 close(INFILE);
 
 # If full path is found, open the ProjectXML to set the variables
-open(INFILE, "$projectXML") or die "Can't open the file $projectXML\n";
+open(INFILE, "$home_dir/$projectXML") or die "Can't open the file $projectXML\n";
 $projType_Finder = 0;
 while(<INFILE>)
 {
@@ -61,10 +63,12 @@ while(<INFILE>)
                 $description = $description . " " . $line[$counter];
             }
         }
+	$description = "'" . $description . "'";
     }
     if ($line[0] eq '<projtype')
     {
         $projType = substr $line[1], 3, -3;
+	$projType = "'" . $projType . "'";
         $projType_Finder = 1;
     }
     if ($line[0] eq '<runs') {$numberOfRun = substr $line[1], 3, -3}
