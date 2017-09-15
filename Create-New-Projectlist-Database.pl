@@ -35,4 +35,4 @@ $statement = $dbh->prepare("CREATE TABLE ProjectList
                           );
 $statement->execute() or die "Could not create ProjectList table: " . $statement->errstr();
 print "New ProjectList table created.\n\n";
-                            
+                      
