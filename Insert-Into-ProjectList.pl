@@ -23,6 +23,10 @@ while(<INFILE>)
         print(substr $line[1], 6, -3);
         print("\n\n");
     }
+    else
+    {
+        print("Sory Project XML: " . $projectXML . " is not found \n\n");
+    }
 }
 
 close(INFILE);
