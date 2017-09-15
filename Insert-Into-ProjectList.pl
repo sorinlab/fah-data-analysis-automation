@@ -4,19 +4,25 @@
 
 
 use DBI;
+use List::Util 'first';
 $input = "\n     Usage\:  Insert-Into-ProjectList.pl [projectNumber]\n\n";
 $projectNumber = @ARGV[0] or die "$input";
+
+$projectXML = $projectNumber . ".xml";
 
 $home_dir = `pwd`;
 chomp($home_dir);
 $config_xml = "$home_dir/config.xml";
 
 open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
-while(<INFILE>)
-{
-    @line = split;
-    print($line[1]."\n");
-}
+
+$found_Dir = first {/$projectXML/} @INFILE;
+
+# while(<INFILE>)
+# {
+#     @line = split;
+    
+# }
 
 
 
