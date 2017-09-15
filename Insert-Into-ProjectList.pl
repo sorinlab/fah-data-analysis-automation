@@ -70,7 +70,7 @@ while(<INFILE>)
 }
 if($projType_Finder == 0)
 {
-    print("Your Project Type is not set in the project.xml\n\tEX: <projtype v='BCHE'/>");
+    print("Your Project Type is not set in the project.xml\n\tEX: <projtype v='BCHE'/>\n");
     die;
 }
 
