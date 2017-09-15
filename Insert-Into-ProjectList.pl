@@ -4,7 +4,7 @@
 
 
 use DBI;
-use List::Util 'first';
+
 $input = "\n     Usage\:  Insert-Into-ProjectList.pl [projectNumber]\n\n";
 $projectNumber = @ARGV[0] or die "$input";
 
@@ -15,15 +15,16 @@ chomp($home_dir);
 $config_xml = "$home_dir/config.xml";
 
 open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
+while(<INFILE>)
+{
+    @line = split;
+    if(index($line[1], $projectXML) != -1)
+    {
+        print("Found a Match: ". $line[1] . "\n\n");
+    }
+}
 
-$found_Dir = first {/$projectXML/} @INFILE;
-
-# while(<INFILE>)
-# {
-#     @line = split;
-    
-# }
-
+close(INFILE);
 
 
 # ############ DO NOT MAKE CHANGES UNLESS YOU KNOW WHAT TO DO ####################
