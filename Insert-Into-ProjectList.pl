@@ -10,6 +10,9 @@ $projectNumber = @ARGV[0] or die "$input";
 
 $projectXML = $projectNumber . ".xml";
 
+$databaseServer = "'banana'";
+$server = "'Folding1'";
+
 $home_dir = `pwd`;
 chomp($home_dir);
 $config_xml = "$home_dir/config.xml";
