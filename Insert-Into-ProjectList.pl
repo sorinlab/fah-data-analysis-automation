@@ -15,18 +15,22 @@ chomp($home_dir);
 $config_xml = "$home_dir/config.xml";
 
 open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
+$projectFinder = 0;
 while(<INFILE>)
 {
     @line = split;
     if(index($line[1], $projectXML) != -1)
     {
+        $projectFinder = 1;
         print(substr $line[1], 6, -3);
         print("\n\n");
     }
-    else
-    {
-        print("Sory Project XML: " . $projectXML . " is not found \n\n");
-    }
+}
+
+if($projectFinder == 0)
+{
+    print("Sory Project XML: " . $projectXML . " is not found \n\n");
+    die;
 }
 
 close(INFILE);
