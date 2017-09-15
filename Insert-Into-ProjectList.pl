@@ -13,7 +13,7 @@ $projectXML = $projectNumber . ".xml";
 $databaseServer = "'banana'";
 $server = "'Folding1'";
 
-$home_dir = `pwd`;
+$home_dir = "/home/server/server2";
 chomp($home_dir);
 $config_xml = "$home_dir/config.xml";
 
