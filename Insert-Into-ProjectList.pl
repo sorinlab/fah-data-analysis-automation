@@ -20,7 +20,7 @@ while(<INFILE>)
     @line = split;
     if(index($line[1], $projectXML) != -1)
     {
-        print("Found a Match: ". $line[1] . "\n\n");
+        print(substr $line[1], 6, -2 ."\n\n");
     }
 }
 
