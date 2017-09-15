@@ -11,7 +11,7 @@ $home_dir = `pwd`;
 chomp($home_dir);
 $config_xml = "$home_dir/config.xml";
 
-open(INFILE, "$config") or die "Can't open the file $config_xml\n";
+open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
 while(<INFILE>)
 {
     @line = split;
