@@ -74,41 +74,42 @@ if($projType_Finder == 0)
     die;
 }
 
-print($description . "\n" . $projType . "\n" . $numberOfRun . "\n" . $numberOfClone . "\n" . $numberOfAtoms . "\n");
+# Use below line to test variables output (For Debugging)
+#print($description . "\n" . $projType . "\n" . $numberOfRun . "\n" . $numberOfClone . "\n" . $numberOfAtoms . "\n");
 
 
 
-# ############ DO NOT MAKE CHANGES UNLESS YOU KNOW WHAT TO DO ####################
-# # Connecting to the Database Server Hosted by Banana
-# $dbserver = "134.139.52.4:3306";
-# my $dbh = DBI->connect("DBI:mysql:mysql:$dbserver",server,"") or print STDERR "Can't connect to mysql database on $dbserver\nTry giving this server permissions\n";
-# print "Database connection established\n";
+############ DO NOT MAKE CHANGES UNLESS YOU KNOW WHAT TO DO ####################
+# Connecting to the Database Server Hosted by Banana
+$dbserver = "134.139.52.4:3306";
+my $dbh = DBI->connect("DBI:mysql:mysql:$dbserver",server,"") or print STDERR "Can't connect to mysql database on $dbserver\nTry giving this server permissions\n";
+print "Database connection established\n";
 
-# # Once Connected, Insert Specific Project into the ProjectList
-# $statement = $dbh->prepare("USE ProjectList");
-# $statement->execute() or die "Could not use ProjectList Database: " . $statement->errstr();
-# $statement = $dbh->prepare("INSERT INTO ProjectList
-#                                 (
-#                                     projNum,
-#                                     projType,
-#                                     dbServer,
-#                                     server,
-#                                     numRun,
-#                                     numClone,
-#                                     numAtoms,
-#                                     description
-#                                 )
-#                                 VALUES
-#                                     (
-#                                         $projectNumber,
-#                                         $projType,
-#                                         $databaseServer,
-#                                         $server,
-#                                         $numberOfRun,
-#                                         $numberOfClone,
-#                                         $numberOfAtoms,
-#                                         $description
-#                                     )"
-#                             );
-# $statement->execute() or die "Could not insert Project $projectNumber into Database: " . $statement->errstr();
-# print "Inserted the new Project into the Database.\n\n";
+# Once Connected, Insert Specific Project into the ProjectList
+$statement = $dbh->prepare("USE ProjectList");
+$statement->execute() or die "Could not use ProjectList Database: " . $statement->errstr();
+$statement = $dbh->prepare("INSERT INTO ProjectList
+                                (
+                                    projNum,
+                                    projType,
+                                    dbServer,
+                                    server,
+                                    numRun,
+                                    numClone,
+                                    numAtoms,
+                                    description
+                                )
+                                VALUES
+                                    (
+                                        $projectNumber,
+                                        $projType,
+                                        $databaseServer,
+                                        $server,
+                                        $numberOfRun,
+                                        $numberOfClone,
+                                        $numberOfAtoms,
+                                        $description
+                                    )"
+                            );
+$statement->execute() or die "Could not insert Project $projectNumber into Database: " . $statement->errstr();
+print "Inserted the new Project into the Database.\n\n";
