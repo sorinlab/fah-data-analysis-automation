@@ -1,12 +1,13 @@
 #!/usr/bin/env python
-''' The F@H Analysis-Work Scouter'''
+''' The F@H Analysis-Work Scout'''
 
 
 import logging
 import json
 import os
+import pickle
 import sys
-from collections import deque
+from subprocess import Popen
 from config import SCOUT_CONFIGURATION as SC
 
 # Sample configuration ###
@@ -59,7 +60,7 @@ def setup_logger(name, log_file, level=logging.INFO):
 LOG = setup_logger('log', SC['log'])
 ERROR_LOG = setup_logger('error_log', SC['error_log'])
 
-# Check fo the existence of a lock file
+# Check for the existence of a lock file
 # If present exit, otherwise set lock and continue
 LOCK = SC['lock']
 if os.path.isfile(LOCK):
@@ -106,7 +107,7 @@ for line in WORK_QUEUED_LINES:
 # Deallocate list of queue entries from memory
 del WORK_QUEUED_LINES
 
-# Make a dictionary of all the finished WU's
+# Make a set of all the finished WU's
 # This will be used to prevent reentering WU's into queue
 WORK_COMPLETED = SC['work_completed']
 if os.path.isfile(WORK_COMPLETED):
@@ -141,6 +142,20 @@ CONTINUE_SET = WORK_QUEUED_SET.union(WORK_COMPLETED_SET)
 # Deallocate work completed/queued sets
 del WORK_COMPLETED, WORK_QUEUED_SET
 
+PICKLE_PATH = '{}/CONTINUE_SET.pkl'.format(os.path.dirname(LOCK))
+try:
+    os.unlink(PICKLE_PATH)
+except OSError as _:
+    try:
+        with open(PICKLE_PATH, mode='wb') as cs_pickle:
+            pickle.dump(CONTINUE_SET, cs_pickle)
+    except IOError as err:
+        ERROR_LOG.info(
+            ': [ERROR] I/O Error(%d): %s. Occurred when attempting to dump pickle=%s.', err.errno, err.strerror, WORK_COMPLETED)
+        LOG.warning(
+            ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+        sys.exit(1)
+
 # Based off the scout configuration,
 # determine which data to scout and
 # and make a list out of it
@@ -163,59 +178,17 @@ for project_name, meta_data in PROJECTS.items():
 # and make a queue out of them
 # This queue will be used to write into the queue file,
 # therefore marking them for analysis
-ENQUEUE = deque()
+PROCESSES = []
 for project_name, directory in WORK:
-    directory_walk = os.walk(directory, topdown=True)
-    for root, _, files in directory_walk:
-        for f in files:
-            if f.endswith(".xtc"):
-                xtc_path = os.path.abspath(os.path.join(root, f))
-                # Skip WU's that are either queued or finished, otherwise mark
-                # them
-                if xtc_path in CONTINUE_SET:
-                    continue
-                else:
-                    ENQUEUE.appendleft('{:<10}\t{:<}'.format(project_name, xtc_path))
+    PROCESSES.append(Popen('python scout_worker.py {} {} {}'.format(project_name, directory, PICKLE_PATH), shell=True))
 
-# Write enqueue list entries to the queue
-LOG.info(': Writing %d entries to queue.', len(ENQUEUE))
-try:
-    with open(QUEUE, mode='a') as queue_file:
-        for item in ENQUEUE:
-            queue_file.write('{}\n'.format(item))
-except IOError as err:
-    ERROR_LOG.info(
-        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. Check the configuration for errors regarding the \'queue\' setting.', err.errno, err.strerror, QUEUE)
-    LOG.warning(
-        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
-    os.unlink(LOCK)
-    sys.exit(1)
-
-LOG.info(': Sorting the queue.')
-try:
-    with open(QUEUE, mode='r') as queue_file:
-        WQL = list(set(queue_file.readlines()))
-    WQL.sort(key=lambda x: int(x.split()[1].split('/')[-1].split('.')[0][5:]))
-except IOError as err:
-    ERROR_LOG.info(
-        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. This error is unexpected and could mean that the queue was deleted intermittently.', err.errno, err.strerror, QUEUE)
-    LOG.warning(
-        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
-    os.unlink(LOCK)
-    sys.exit(1)
-try:
-    with open(QUEUE, mode='w') as queue_file:
-        for x in xrange(len(WQL)):
-            queue_file.write(WQL[x])
-    LOG.info(': Finished sorting the queue.')
-except IOError as err:
-    ERROR_LOG.info(
-        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. This error is unexpected and could mean that the queue was deleted intermittently.', err.errno, err.strerror, QUEUE)
-    LOG.warning(
-        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
-    os.unlink(LOCK)
-    sys.exit(1)
-
-# Release lock and exit
+for process in PROCESSES:
+    _, _ = process.communicate()
+    return_code = process.returncode
+    if return_code > 0:
+        LOG.info(': [ERROR] Scout worker terminated unsuccessfully!')
+    else:
+        LOG.info(': Scout worker terminated successfully.')
+LOG.info(': All workers have terminated. Removing lock and exiting...')
+os.unlink(PICKLE_PATH)
 os.unlink(LOCK)
-LOG.info(': Scouting finished and lock unset.')
