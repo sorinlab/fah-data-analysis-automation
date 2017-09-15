@@ -15,7 +15,7 @@ open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
 while(<INFILE>)
 {
     @line = split;
-    print($line[0]."\n");
+    print($line[1]."\n");
 }
 
 
