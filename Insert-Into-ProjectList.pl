@@ -9,10 +9,9 @@ $projectNumber = @ARGV[0] or die "$input";
 
 $home_dir = `pwd`;
 chomp($home_dir);
-$config_Dir = "$home_dir/config.xml";
-$config_xml = $projectNumber.".xml";
+$config_xml = "$home_dir/config.xml";
 
-open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
+open(INFILE, "$config") or die "Can't open the file $config_xml\n";
 while(<INFILE>)
 {
     @line = split;
