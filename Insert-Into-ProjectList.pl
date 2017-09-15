@@ -41,7 +41,23 @@ $projType_Finder = 0;
 while(<INFILE>)
 {
     @line = split;
-    if ($line[0] eq '<title') {$description = substr $line[1], 3, -3}
+    if ($line[0] eq '<title')
+    {
+        $counter = 1;
+        $description = substr $line[$counter], 3;
+        for (, $counter < $#line, $counter++)
+        {
+            if ($counter == $#line)
+            {
+                $description = $description . " " . substr $line[$counter], 0, -3;
+                last;
+            }
+            else
+            {
+                $description = $description . " " . $line[$counter];
+            }
+        }
+    }
     if ($line[0] eq '<projtype')
     {
         $projType = substr $line[1], 3, -3;
