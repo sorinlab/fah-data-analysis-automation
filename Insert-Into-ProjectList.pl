@@ -7,8 +7,17 @@ use DBI;
 $input = "\n     Usage\:  Insert-Into-ProjectList.pl [projectNumber]\n\n";
 $projectNumber = @ARGV[0] or die "$input";
 
+$home_dir = `pwd`;
+chomp($home_dir);
+$config_Dir = "$home_dir/config.xml";
+$config_xml = $projectNumber.".xml";
 
-print($projectNumber);
+open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
+while(<INFILE>)
+{
+    @line = split;
+    print($line[0]."\n");
+}
 
 
 
