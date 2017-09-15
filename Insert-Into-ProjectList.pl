@@ -23,7 +23,7 @@ while(<INFILE>)
     if(index($line[1], $projectXML) != -1)
     {
         $projectFinder = 1;
-        $projectXML = substr $line[1], 6, -3);
+        $projectXML = substr $line[1], 6, -3;
         print("Project's Full Path Found: " . $projectXML . "\n");
         last; # Using "last" to exit out of the while loop
     }
@@ -37,14 +37,29 @@ close(INFILE);
 
 # If full path is found, open the ProjectXML to set the variables
 open(INFILE, "$projectXML") or die "Can't open the file $projectXML\n";
+$projType_Finder = 0;
 while(<INFILE>)
 {
     @line = split;
-    if ($line[0] eq '<projtype') {$projType = substr $line[1], 3, -3}
+    if ($line[0] eq '<title') {$description = substr $line[1], 3, -3}
+    if ($line[0] eq '<projtype')
+    {
+        $projType = substr $line[1], 3, -3;
+        $projType_Finder = 1;
+    }
     if ($line[0] eq '<runs') {$numberOfRun = substr $line[1], 3, -3}
+    if ($line[0] eq '<clones') {$numberOfClone = substr $line[1], 3, -3}
+    if ($line[0] eq '<atoms') {$numberOfAtoms = substr $line[1], 3, -3}
+}
+if($projType_Finder == 0)
+{
+    print("Your Project Type is not set in the project.xml\n\tEX: <projtype v='BCHE'/>");
+    die;
 }
 
-print($projType . "\t" . $numberOfRun . "\n");
+print($description . "\n" . $projType . "\n" . $numberOfRun . "\n" . $numberOfClone . "\n" . $numberOfAtoms . "\n");
+
+
 
 # ############ DO NOT MAKE CHANGES UNLESS YOU KNOW WHAT TO DO ####################
 # # Connecting to the Database Server Hosted by Banana
