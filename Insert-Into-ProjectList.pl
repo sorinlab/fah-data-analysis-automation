@@ -47,7 +47,7 @@ while(<INFILE>)
         $description = substr $line[$counter], 3;
         while($counter <= $#line)
         {
-            $counter++
+            $counter++;
             if ($counter == $#line)
             {
                 $description = $description . " " . substr $line[$counter], 0, -3;
