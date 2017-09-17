@@ -11,7 +11,7 @@ sub trim($) {
 
 #######################	setup I/O ############################
 # Dirs #
-$home_dir = "...";
+$home_dir = "/home/server/server2";
 $analysis_dir = "$home_dir/fah-data-analysis-automation";								
 $bin_dir = "$analysis_dir/bin";
 $gro_dir = "$analysis_dir/gro-files";
@@ -24,10 +24,7 @@ $work_finished = "$analysis_dir/done.txt";
 $lock = "$analysis_dir/lock.txt";
 
 #######################	DB Configuration ############################
-$db="MYTEST";
-$host="localhost";
-$user="root";
-$password="rootpass";
+$dbserver="134.139.52.4:3306";
 
 ######### defaults stuff ###########
 $def_frame_size = 100; # time between frames in ps #
@@ -400,3 +397,33 @@ foreach (@queue_lines) {
 # close(LOGFILE);
 # close(LOG);
 # if(!($debug)){ system("mv $logfile DONE/; mv $infile LOGS/; rm debug.log"); }
+
+#################### Insert Project into its Database #########################
+my $dbh = DBI->connect("DBI:mysql:mysql:$dbserver",server,"");
+if (!defined $dbh)
+{
+	print LOG "Unable to connect to the Database with the following IP: $dbserver\n";
+	close(LOG);
+	print "Check '$log' for details";
+	system("rm $lock");
+	die;
+}
+print "Database connection established\n";
+
+# Using the project's name Database for Insertion
+$statement = $dbh->prepare("USE $project_name");
+if (!defined $statement->execute())
+{
+	print LOG "Unable to use Database $project_name";
+	close(LOG);
+	print "Check '$log' for details";
+	system("rm $lock");
+	die;
+}
+print "Using Database $project_name\n";
+
+# Inserting into the Database
+$statement = $dbh->prepare("INSERT INTO $project_name
+								(
+										
+								)")
