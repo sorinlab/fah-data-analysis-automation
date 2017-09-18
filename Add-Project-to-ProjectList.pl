@@ -5,8 +5,8 @@
 
 use DBI;
 
-$input = "\n     Usage\:  Insert-Into-ProjectList.pl [projectNumber]\n\tMake sure the server config.xml is in the same directory as this Script.\n";
-$projectNumber = @ARGV[0] or die "$input";
+$input = "\n     Usage\:  Add-Project-to-ProjectList.pl [projectNumber]\n";
+$projectNumber = @ARGV[0] or die "$input\n";
 
 $projectXML = $projectNumber . ".xml";
 
