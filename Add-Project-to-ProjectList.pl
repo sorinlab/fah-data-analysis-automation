@@ -5,8 +5,8 @@
 
 use DBI;
 
-$input = "\n     Usage\:  Add-Project-to-ProjectList.pl [proj\$number]\n";
-$projectNumber = @ARGV[0] or die "$input\n";
+$input = "\n     Usage\:  Insert-Into-ProjectList.pl [projectNumber]\n\tMake sure the server config.xml is in the same directory as this Script.\n";
+$projectNumber = @ARGV[0] or die "$input";
 
 $projectXML = $projectNumber . ".xml";
 
@@ -45,21 +45,35 @@ open(INFILE, "$home_dir/$projectXML") or die "Can't open the file $projectXML\n"
 $projType_Finder = 0;
 while(<INFILE>)
 {
-    @line = split(/"/, $line);
-    if (index($line[0], "title") != -1)
+    @line = split;
+    if ($line[0] eq '<title')
     {
-        $description = $line[2];
-	    $description = "'" . $description . "'";
+        $counter = 1;
+        $description = substr $line[$counter], 3;
+        while($counter <= $#line)
+        {
+            $counter++;
+            if ($counter == $#line)
+            {
+                $description = $description . " " . substr $line[$counter], 0, -3;
+                last;
+            }
+            else
+            {
+                $description = $description . " " . $line[$counter];
+            }
+        }
+	$description = "'" . $description . "'";
     }
-    if (index($line[0], "projtype") != -1)
+    if ($line[0] eq '<projtype')
     {
-        $projType = $line[2];
-	    $projType = "'" . $projType . "'";
+        $projType = substr $line[1], 3, -3;
+	$projType = "'" . $projType . "'";
         $projType_Finder = 1;
     }
-    if (index($line[0], "run") != -1) {$numberOfRun = $line[2]}
-    if (index($line[0], "clones") != -1) {$numberOfClone = $line[2]}
-    if (index($line[0], "atoms") != -1) {$numberOfAtoms = $line[2]}
+    if ($line[0] eq '<runs') {$numberOfRun = substr $line[1], 3, -3}
+    if ($line[0] eq '<clones') {$numberOfClone = substr $line[1], 3, -3}
+    if ($line[0] eq '<atoms') {$numberOfAtoms = substr $line[1], 3, -3}
 }
 if($projType_Finder == 0)
 {
