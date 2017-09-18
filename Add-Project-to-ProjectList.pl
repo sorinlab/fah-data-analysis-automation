@@ -5,7 +5,7 @@
 
 use DBI;
 
-$input = "\n     Usage\:  Add-Project-to-ProjectList.pl [projectNumber]\n";
+$input = "\n     Usage\:  Add-Project-to-ProjectList.pl [proj\$number]\n";
 $projectNumber = @ARGV[0] or die "$input\n";
 
 $projectXML = $projectNumber . ".xml";
