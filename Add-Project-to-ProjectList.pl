@@ -5,7 +5,7 @@
 
 use DBI;
 
-$input = "\n     Usage\:  Insert-Into-ProjectList.pl [projectNumber]\n\tMake sure the server config.xml is in the same directory as this Script.\n";
+$input = "\n     Usage\:  Add-Project-to-ProjectList.pl [proj$Number]\n\tMake sure the server config.xml is in the same directory as this Script.\n";
 $projectNumber = @ARGV[0] or die "$input";
 
 $projectXML = $projectNumber . ".xml";
@@ -13,7 +13,9 @@ $projectXML = $projectNumber . ".xml";
 $projectNumber = substr $projectNumber, 4;
 
 $databaseServer = "'banana'";
-$server = "'Folding1'";
+
+$server = system("echo $HOSTNAME");
+$server = "'" . $server . "'";
 
 $home_dir = "/home/server/server2";
 chomp($home_dir);
