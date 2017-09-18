@@ -14,10 +14,8 @@ $projectNumber = substr $projectNumber, 4;
 
 $databaseServer = "'banana'";
 
-$server = `echo \$HOSTNAME`; 
+$server = `hostname`; 
 chomp $server;
-print STDOUT "$server\n";
-exit();
 $server = "'" . $server . "'";
 
 $home_dir = "/home/server/server2";
