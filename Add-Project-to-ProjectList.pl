@@ -45,7 +45,7 @@ open(INFILE, "$home_dir/$projectXML") or die "Can't open the file $projectXML\n"
 $projType_Finder = 0;
 while(<INFILE>)
 {
-    @line = @split(/"/, $line);
+    @line = split(/"/, $line);
     if (index($line[0], "title") != -1)
     {
         $description = $line[2];
