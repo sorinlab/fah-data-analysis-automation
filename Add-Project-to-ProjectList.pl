@@ -45,35 +45,21 @@ open(INFILE, "$home_dir/$projectXML") or die "Can't open the file $projectXML\n"
 $projType_Finder = 0;
 while(<INFILE>)
 {
-    @line = split;
-    if ($line[0] eq '<title')
+    @line = @split(/"/, $line);
+    if (index($line[0], "title") != -1)
     {
-        $counter = 1;
-        $description = substr $line[$counter], 3;
-        while($counter <= $#line)
-        {
-            $counter++;
-            if ($counter == $#line)
-            {
-                $description = $description . " " . substr $line[$counter], 0, -3;
-                last;
-            }
-            else
-            {
-                $description = $description . " " . $line[$counter];
-            }
-        }
-	$description = "'" . $description . "'";
+        $description = $line[2];
+	    $description = "'" . $description . "'";
     }
-    if ($line[0] eq '<projtype')
+    if (index($line[0], "projtype") != -1)
     {
-        $projType = substr $line[1], 3, -3;
-	$projType = "'" . $projType . "'";
+        $projType = $line[2];
+	    $projType = "'" . $projType . "'";
         $projType_Finder = 1;
     }
-    if ($line[0] eq '<runs') {$numberOfRun = substr $line[1], 3, -3}
-    if ($line[0] eq '<clones') {$numberOfClone = substr $line[1], 3, -3}
-    if ($line[0] eq '<atoms') {$numberOfAtoms = substr $line[1], 3, -3}
+    if (index($line[0], "run") != -1) {$numberOfRun = $line[2]}
+    if (index($line[0], "clones") != -1) {$numberOfClone = $line[2]}
+    if (index($line[0], "atoms") != -1) {$numberOfAtoms = $line[2]}
 }
 if($projType_Finder == 0)
 {
