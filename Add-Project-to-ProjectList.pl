@@ -24,9 +24,9 @@ $config_xml = "$home_dir/config.xml";
 
 # Opening the server xml inorder to find the full path to the projectXML
 open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
-$projectFinder = 0;
 while(<INFILE>)
 {
+    $projectFinder = 0;
     @line = split;
     if(index($line[1], $projectXML) != -1)
     {
