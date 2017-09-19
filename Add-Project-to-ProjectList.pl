@@ -46,37 +46,32 @@ close(INFILE);
 # If full path is found, open the ProjectXML to set the variables
 open(INFILE, "$home_dir/$projectXML") or die "Can't open the file $projectXML\n";
 $projType_Finder = 0;
-while(<INFILE>)
+while(my $line = <INFILE>)
 {
-    @line = split;
-    if ($line[0] eq '<title')
+    @split_line = split(/"/, $line);
+    if(index($split_line[0], "title") !=-1)
     {
-        $counter = 1;
-        $description = substr $line[$counter], 3;
-        while($counter <= $#line)
-        {
-            $counter++;
-            if ($counter == $#line)
-            {
-                $description = $description . " " . substr $line[$counter], 0, -3;
-                last;
-            }
-            else
-            {
-                $description = $description . " " . $line[$counter];
-            }
-        }
-	$description = "'" . $description . "'";
+        $description = $split_line[1];
+        $description = "'" . $description . "'";
     }
-    if ($line[0] eq '<projtype')
+    if (index($split_line[0], "projtype") != -1)
     {
-        $projType = substr $line[1], 3, -3;
+        $projType = $split_line[1];
 	$projType = "'" . $projType . "'";
         $projType_Finder = 1;
     }
-    if ($line[0] eq '<runs') {$numberOfRun = substr $line[1], 3, -3}
-    if ($line[0] eq '<clones') {$numberOfClone = substr $line[1], 3, -3}
-    if ($line[0] eq '<atoms') {$numberOfAtoms = substr $line[1], 3, -3}
+    if (index($split_line[0], "runs") != -1)
+    {
+        $numberOfRun = $split_line[1];
+    }
+    if (index($split_line[0], "clones") != -1)
+    {
+        $numberOfClone = $split_line[1];
+    }
+    if (index($split_line[0], "atoms") != -1)
+    {
+        $numberOfAtoms = $split_line[1];
+    }
 }
 if($projType_Finder == 0)
 {
