@@ -32,7 +32,7 @@ $statement = $dbh->prepare("CREATE TABLE $name
                               frame INT NOT NULL, 
                               rmsd_pro FLOAT, 
                               rmsd_complex FLOAT, 
-                              COMdist FLOAT, 
+                              mindist FLOAT, 
                               rg_pro FLOAT, 
                               E_vdw FLOAT, 
                               E_qq FLOAT, 
