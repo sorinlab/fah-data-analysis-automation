@@ -24,8 +24,8 @@ sub exit_on_error {
 
 #######################	setup I/O ############################
 # Dirs #
-my $home_dir = "/Users/xaviermartinez/Documents/fah-data-analysis-automation";
-my $analysis_dir = "$home_dir/fah-analysis-testing";
+my $home_dir = "/home/server/server2";
+my $analysis_dir = "$home_dir/analysis";
 my $fah_files = "$analysis_dir/fah-files";
 my $sandbox_dir = "$analysis_dir/sandbox";
 # Files #
