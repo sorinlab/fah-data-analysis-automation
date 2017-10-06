@@ -13,12 +13,12 @@ sub trim($) {
 sub exit_on_error {
 	my($s_dir, $q_file, @q_lines, $curr_q_line) = @_;
 	system("rm $s_dir/*");
-	$q_lines = $curr_q_line . "\n";
+	$qu_lines = $curr_q_line . "\n";
 	foreach (@q_lines) {
-		$q_lines = $q_lines . $_ . "\n";
+		$qu_lines = $qu_lines . $_ . "\n";
 	}
 	open my $NEW_Q, ">", $q_file;
-	print $NEW_Q $q_lines;
+	print $NEW_Q $qu_lines;
 	close($NEW_Q);
 }
 
@@ -39,7 +39,7 @@ my $dbserver = "134.139.52.4:3306";
 #######################	Open Logger ############################
 # This script always writes to a log file
 # Status updates, warnings and errors will appear in this file
-open my $LOG, ">", $log || die "\nError: can't open analyzer.log\n\n";
+open my $LOG, ">>", $log || die "\nError: can't open analyzer.log\n\n";
 
 #######################	Set Lock ############################
 if (-e $lock) {
@@ -97,6 +97,7 @@ while (my $queue_line = shift @queue_lines) {
 	
 	#################### .xtc check ###################
 	if (-e $work_unit) {
+		print $LOG "Found WU=$work_unit\n";
 		@work_unit_information = split(/\//, $work_unit);
 		foreach(@work_unit_information) {
 			if (index($_, "frame") != -1) {
@@ -125,12 +126,11 @@ while (my $queue_line = shift @queue_lines) {
 		############### get/prep the gromacs files for analysis  ##############
 		$edr = "$xtc_base_dir/frame$f.edr";
 		$tpr = "$xtc_base_dir/frame0.tpr";
-
-		print $LOG "Processing xtc=$work_unit\n";
-		print $LOG "Processing edr=$edr\n";
-		print $LOG "Processing tpr=$tpr\n";
-
 		if((-e $edr) && (-e $tpr)) {
+			print $LOG "Processing xtc=$work_unit\n";
+			print $LOG "Processing edr=$edr\n";
+			print $LOG "Processing tpr=$tpr\n";
+			
 			######################
 			# BCHE table format  #
 			######################
@@ -201,6 +201,7 @@ while (my $queue_line = shift @queue_lines) {
 			}
 			chomp(@rmsd_lines = <$RMS>);
 			close($RMS);
+			print $LOG "Getting protein RMSD's...\n";
 			foreach (@rmsd_lines){
 				if (index($_, "#") != -1) {
 					next;
@@ -226,6 +227,7 @@ while (my $queue_line = shift @queue_lines) {
 			}
 			chomp(@rmsd_complex_lines = <$RMS_COMPLEX>);
 			close($RMS_COMPLEX);
+			print $LOG "Getting complex RMSD's...\n";
 			foreach (@rmsd_complex_lines){
 				if (index($_, "#") != -1) {
 					next;
@@ -256,6 +258,7 @@ while (my $queue_line = shift @queue_lines) {
 				}
 				chomp(@mindist_lines = <$MINDIST>);
 				close($MINDIST);
+				print $LOG "Getting mindist of complex...\n";
 				foreach (@mindist_lines){
 					if (index($_, "#") != -1) {
 						next;
@@ -282,6 +285,7 @@ while (my $queue_line = shift @queue_lines) {
 			}
 			chomp(@rg_lines = <$RG>);
 			close($RG);
+			print $LOG "Getting RG's...\n";
 			foreach (@rg_lines){
 				if (index($_, "#") != -1) {
 					next;
@@ -307,6 +311,7 @@ while (my $queue_line = shift @queue_lines) {
 			}
 			chomp(@energy_lines = <$ENERGY>);
 			close($ENERGY);
+			print $LOG "Getting vdW and QQ energies...\n";
 			foreach (@energy_lines){
 				if (index($_, "#") != -1) {
 					next;
@@ -337,6 +342,7 @@ while (my $queue_line = shift @queue_lines) {
 			}
 			chomp(@dssp_lines = <$DSSP>);
 			close($DSSP);
+			print $LOG "Getting dssp string...\n";
 			@dssp_x_axis;
 			$dssp_string = "";
 DSSP_OUTER: foreach (@dssp_lines){
@@ -376,6 +382,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 			}
 			chomp(@dssp_counts_lines = <$DSSP_COUNTS>);
 			close($DSSP_COUNTS);
+			print $LOG "Getting Nhelix, Nbeta, and Nccoil...\n";
 			foreach (@dssp_counts_lines){
 				if (index($_, "#") != -1) {
 					next;
@@ -403,10 +410,10 @@ DSSP_OUTER: foreach (@dssp_lines){
 			}
 
 			############## MYSQL ###################
-			print $LOG "Obtained data points for all attributes, inserting into database...";
+			print $LOG "Obtained data points for all attributes, inserting into database...\n";
 			# Connecting to the db hosted on banana #
 			my $dbh = DBI->connect("DBI:mysql:$project_name:$dbserver","server","", { AutoCommit => 0 }) or do {
-				print $LOG "[ERROR] Can't connect to mysql database on $dbserver.";
+				print $LOG "[ERROR] Can't connect to mysql database on $dbserver.\n";
 				close($LOG);
 				close($WORK_FINISHED);
 				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
@@ -417,25 +424,69 @@ DSSP_OUTER: foreach (@dssp_lines){
 			keys %insert_data;
 			foreach my $k (keys %insert_data) {
 				@v = @{$insert_data{$k}};
-				$sql_str = "INSERT IGNORE INTO TABLE $project_name (proj,run,clone,frame,rmsd_pro,rmsd_complex,mindist,rg_pro,E_vdw,E_qq,dssp,Nhelix,Nbeta,Ncoil,dateacquried,timeacquired) VALUES($pro,$r,$cln,$k,$v[0],$v[1],$v[2],$v[3],$v[4],$v[5],'$v[6]',$v[7],$v[8],$v[9],'$date','$time')"; # On duplicate primary key ignore
-				$statement = $dbh->prepare($sql_str);
-				$statement->execute();
+				# On duplicate primary key ignore
+				$sql_str = "INSERT IGNORE INTO TABLE $project_name (proj,run,clone,frame,rmsd_pro,rmsd_complex,mindist,rg_pro,E_vdw,E_qq,dssp,Nhelix,Nbeta,Ncoil,dateacquried,timeacquired) VALUES($pro,$r,$cln,$k,$v[0],$v[1],$v[2],$v[3],$v[4],$v[5],'$v[6]',$v[7],$v[8],$v[9],'$date','$time')";
+				eval {
+					$statement = $dbh->prepare($sql_str);
+					$statement->execute();
+				};
+				if($@) {
+					$stmnt_err = $statement->errstr();
+					print $LOG "[ERROR] On insert=$sql_str. $stmnt_err ... Unsetting lock and exiting...\n";
+					close($LOG);
+					close($WORK_FINISHED);
+					exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+					system("rm $lock");
+					die;
+				}
 			}
-			$dbh->commit();
+			eval {
+				$dbh->commit();
+			};
+			if($@){
+				$dbh->rollback();
+				print $LOG "[ERROR] On committing data to database. Rollingback changes, unsetting lock, and exiting...\n";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			print $LOG "Committed inserts to database.\n";
 			# Add entry to work finished #
 			print $WORK_FINISHED $queue_line . "\n";
+			print $LOG "Successfully analyzed and inserted data for WU=$work_unit. Added this entry $work_finished.\n";
+			# Clear sandbox #
+			system("rm $sandbox_dir/*");
 		} else {
 			print $LOG "[ERROR] MISSING EDR=$edr or TPR=$tpr. Unsetting lock and exiting...\n";
 			close($LOG);
 			close($WORK_FINISHED);
 			exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
-			system("rm $lock"); 
+			system("rm $lock");
+			die;
 		}
 	} else {
 		print $LOG "[ERROR] MISSING XTC=$work_unit. Unsetting lock and exiting...\n";
 		close($LOG);
 		close($WORK_FINISHED);
 		exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
-		system("rm $lock"); 
+		system("rm $lock");
+		die;
 	}
 }
+# Clearing the queue #
+open my $QUEUE_CLEAR, ">", $queue or do {
+	print $LOG "[ERROR] Unable to clear queue. This error is unexpected and should be investigated. Unsetting lock and exiting...\n";
+	close($LOG);
+	close($WORK_FINISHED);
+	system("rm $lock");
+	die;
+}
+print $LOG "Cleared the queue.\n";
+close($QUEUE_CLEAR);
+close($WORK_FINISHED);
+print $LOG "Anylsis complete. Exiting...\n";
+close($LOG);
+system("rm $lock");
+exit;
