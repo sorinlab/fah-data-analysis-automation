@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 use DBI;
+use Scalar::Util qw(looks_like_number);
 
 # Perl trim function to remove whitespace from the start and end of the string
 sub trim($) {
@@ -8,9 +9,22 @@ sub trim($) {
 	return $string;
 }
 
+# Exit on error function
+sub exit_on_error {
+	my($s_dir, $q_file, @q_lines, $curr_q_line) = @_;
+	system("rm $s_dir/*");
+	$q_lines = $curr_q_line . "\n";
+	foreach (@q_lines) {
+		$q_lines = $q_lines . $_ . "\n";
+	}
+	open my $NEW_Q, ">", $q_file;
+	print $NEW_Q $q_lines;
+	close($NEW_Q);
+}
+
 #######################	setup I/O ############################
 # Dirs #
-my $home_dir = "/home/xavier";
+my $home_dir = "/Users/xaviermartinez/Documents/fah-data-analysis-automation";
 my $analysis_dir = "$home_dir/fah-analysis-testing";
 my $fah_files = "$analysis_dir/fah-files";
 my $sandbox_dir = "$analysis_dir/sandbox";
@@ -19,6 +33,8 @@ my $log = "$analysis_dir/analyzer-logs/analyzer.log";
 my $queue = "$analysis_dir/queue.txt";
 my $work_finished = "$analysis_dir/done.txt";
 my $lock = "$analysis_dir/lock.txt";
+# DB #
+my $dbserver = "134.139.52.4:3306";
 
 #######################	Open Logger ############################
 # This script always writes to a log file
@@ -60,6 +76,11 @@ if (-e $queue) {
 }
 if (-e $work_finished) {
 	print $LOG "work_finished=$work_finished exists.\n";
+	unless(open $WORK_FINISHED, ">>", $work_finished) {
+		print $LOG "[ERROR] Unable to open work_finished=$work_finished. Unsetting lock and exiting...\n";
+		system("rm $lock");
+		die;
+	}
 } else {
 	print $LOG "[ERROR] work_finished=$work_finished does not exist. Check for erros in the configuration. Unsetting lock and exiting...\n";
 	close($LOG);
@@ -69,8 +90,8 @@ if (-e $work_finished) {
 print $LOG "Sanity check: queue & work_finished passed. Continuing...\n";
 
 #################### get frame info #########################
-foreach (@queue_lines) { 
-	my @queue_data = split(/\t/, $_);
+while (my $queue_line = shift @queue_lines) { 
+	my @queue_data = split(/\t/, $queue_line);
 	my $project_name = trim($queue_data[0]);
 	my $work_unit = trim($queue_data[1]);
 	
@@ -84,6 +105,10 @@ foreach (@queue_lines) {
 				$f = substr($xtc_split[0], 5);
 			} elsif(index($_, "PROJ") != -1) {
 				$pro = substr($_, 4);
+			} elsif(index($_, "RUN") != -1) {
+				$r = substr($_, 3);
+			} elsif(index($_, "CLONE") != -1) {
+				$cln = substr($_, 5);
 			}
 		}
 
@@ -106,6 +131,27 @@ foreach (@queue_lines) {
 		print $LOG "Processing tpr=$tpr\n";
 
 		if((-e $edr) && (-e $tpr)) {
+			######################
+			# BCHE table format  #
+			######################
+			# proj INT NOT NULL, # 
+			# run INT NOT NULL,  #
+			# clone INT NOT NULL,# 
+			# frame INT NOT NULL,#
+			# rmsd_pro FLOAT,    #
+			# rmsd_complex FLOAT,#
+			# mindist FLOAT,     #
+			# rg_pro FLOAT,      #
+			# E_vdw FLOAT,       #
+			# E_qq FLOAT,        #
+			# dssp VARCHAR(550), #
+			# Nhelix INT,        #
+			# Nbeta INT,         #
+			# Ncoil INT,         #
+			# dateacquried DATE, #
+			# timeacquired TIME  #
+			######################
+			my %insert_data;
 
 			# define (input) filenames #
 			$xtcfile = "$sandbox_dir/current_frame.xtc";
@@ -127,7 +173,6 @@ foreach (@queue_lines) {
 			$mindistfile = "$sandbox_dir/mindist.xvg";
 			$energyfile = "$sandbox_dir/energy.xvg";
 
-			
 			# generate gromacs data files #
 			# for sans inhibitor / PROJ8200 #
 			if($pro eq "8200") {
@@ -145,198 +190,252 @@ foreach (@queue_lines) {
 			# 48 and 49 should be named similar to LJ-SR:Protein-DP2 and Coul-SR:Protein-DP2 #
 			system("echo 48 49 | g_energy -s $tprfile -f $edrfile -o $energyfile");
 
-			`rm $lock`;
-			close $LOG;
-			die;
+			# get protein rmsd's #
+			unless(open $RMS,"<", $rmsdfile) {
+				print $LOG "[ERROR] When attempting to open $rmsdfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			chomp(@rmsd_lines = <$RMS>);
+			close($RMS);
+			foreach (@rmsd_lines){
+				if (index($_, "#") != -1) {
+					next;
+				}
+				if (index($_, "@") != -1) {
+					next;
+				}
+				$rmsd_trim_line = trim($_);
+				@rmsd_values = split(/\s+/, $rmsd_trim_line);
+				$rmsd_time = int($rmsd_values[0]);
+				$rmsd_value = $rmsd_values[1];
+				$insert_data{"$rmsd_time"}[0] = $rmsd_value; 
+			}
 
-			# get rmsd's from relaxed structure using g_rms #
-			# unless(open my $RMS,"<", $rmsdfile) {
-			# 	print LOGFILE "[ERROR] When attempting to open $rmsdfile for xtc=$work_unit. Unsetting lock and exiting...\n";
-			# 	close($LOG);
-			# 	system("rm $lock");
-			# 	die;
-			# }
-			# $iter=0;
-			# while($line=<$RMS>){
-			# 	chomp $line;
-			# 	for($line) {  s/^\s+//; s/\s+$//; s/\s+/ /g; }
-			# 	@lined = split(/ /,$line);
-			# 	if(@lined[0] =~ /\d+/) {
-			# 		if($iter>0){
-			# 		# to check for extra t_zero line #
-			# 			if($lined[0] == $oldline) { 
-			# 			$oldline = $lined[0]; 
-			# 			next;
-			# 		}
-			# 		}
-			# 		$oldline = $lined[0]; 
-			# 	$tim = (int($oldline/$def_frame_size)) + ($f * $def_framesperwu); # in sequential frame # ... ie. [201..399] for frame1.xxx
-			# 	$rms1{$tim} = @lined[1] * $nm2A;
-			# 	$iter++;
-			# 	}
-			# }
-			# close($RMS);
-
-			# # get chain Rg using g_gyrate # 
-			# unless(open(RG,"<", $gyratefile)) {
-			# 	print LOGFILE "[ERROR] When attempting to open $gyratefile for xtc=$work_unit. Unsetting lock and exiting...\n";
-			# 	close($LOG);
-			# 	system("rm $lock");
-			# 	die;
-			# }
-			# $iter=0;
-			# while($line=<RG>){
-			# 	chomp $line;
-			# 	for($line) {  s/^\s+//; s/\s+$//; s/\s+/ /g; }
-			# 	@lined = split(/ /,$line);
-			# 	if(@lined[0] =~ /\d+/) {
-			# 		if($iter>0){
-			# 			# to check for extra t_zero line #
-			# 			if($lined[0] == $oldline) {
-			# 				$oldline = $lined[0];
-			# 				next;
-			# 			}
-			# 		}
-			# 		$oldline = $lined[0];
-			# 		$tim = (int($oldline/$def_frame_size)) + ($f * $def_framesperwu);
-			# 		$radgyr{$tim} = @lined[1] * $nm2A;
-			# 		$iter++;
-			# 	}
-			# }
-			# close(RG);
-
-			# get Eint .edr files #
-			# unless(open(EDR,"<", "?")) {
-			# 	print LOGFILE "[ERROR] When attempting to open ? for xtc=$work_unit. Unsetting lock and exiting...\n";
-			# 	close($LOG);
-			# 	system("rm $lock");
-			# 	die;
-			# } 
-			# $iter=0;
-			# while($line=<EDR>){
-			# 	chomp $line;
-			# 	for($line) {  s/^\s+//; s/\s+$//; s/\s+/ /g; }
-			# 	@lined = split(/ /,$line);
-			# 	if((@lined[1] =~ /\d+/)&&(@lined[0] ne "\@")) {
-			# 		if($iter>0){
-			# 			# to check for extra t_zero line #
-			# 			if($lined[1] == $oldline) {
-			# 				$oldline = $lined[1];
-			# 				next;
-			# 			}
-			# 		}
-			# 			$oldline = $lined[0];
-			# 		# need in sequential frame # ... ie. [11..19] for frame1.xxx
-			# 		$tim = (int($oldline/$def_frame_size)) + ($f * $def_framesperwu); 
-			# 		$Epot{$tim} = @lined[1] - @lined[2] - @lined[3] - @lined[4] - @lined[5];
-			# 		$iter++;
-			# 	}
-			# }
-			# close(EDR);
-
-			# get dssp data #
-			# $iter=0;
-			# $sstmp = "$sandbox_dir/ss.tmp";
-			# `tail -522 $dsspfile > $sstmp`; # 522 signifies # of residues DSSP is analyzing
-			# for($ii = 0; $ii <= $framesperwu; $ii++) {
-			# 	$Nhelix{$ii} = 0;
-			# 	$Nalpha{$ii} = 0;
-			# 	$Nbeta{$ii} = 0;
-			# 	$Npi{$ii} = 0;
-			# 	$Ncoil{$ii} = 0;
-			# }
-			# unless(open(DSSP,"<", $sstmp)) {
-			# 	print LOGFILE "[ERROR] When attempting to open $sstmp for xtc=$work_unit. Unsetting lock and exiting...\n";
-			# 	close($LOG);
-			# 	system("rm $lock");
-			# 	die;
-			# }
-			# while($line=<DSSP>){
-			# 	chomp $line;
-			# 	for($line) { s/\"//; s/\,//;  s/\"//; }
-			# 	@newline = split(//,$line);
-			# 	for($ii = 0; $ii < $framesperwu; $ii++) { 
-			# 		# each dssp letter is specified as $dssp{res,time} #
-			# 		$dssp{$iter,$ii} = $newline[$ii];
-			# 	}
-			# 	$iter++;	
-			# }
-			# $resiter = $iter;
+			# get complex rmsd's #
+			unless(open $RMS_COMPLEX,"<", $rmsdcomplexfile) {
+				print $LOG "[ERROR] When attempting to open $rmsdcomplexfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			chomp(@rmsd_complex_lines = <$RMS_COMPLEX>);
+			close($RMS_COMPLEX);
+			foreach (@rmsd_complex_lines){
+				if (index($_, "#") != -1) {
+					next;
+				}
+				if (index($_, "@") != -1) {
+					next;
+				}
+				$rmsd_complex_trim_line = trim($_);
+				@rmsd_complex_values = split(/\s+/, $rmsd_complex_trim_line);
+				$rmsd_complex_time = int($rmsd_complex_values[0]);
+				$rmsd_complex_value = $rmsd_complex_values[1];
+				$insert_data{"$rmsd_complex_time"}[1] = $rmsd_complex_value; 
+			}
 			
-			# for($ii = 0; $ii < $framesperwu; $ii++) { 
-			# 	for($iter = 0; $iter < $resiter; $iter++) { 
-			# 		if($dssp{$iter,$ii} eq "H"){ $Nhelix{$ii}++; }
-			# 		if($dssp{$iter,$ii} eq "G"){ $Nhelix{$ii}++; }
-			# 		if($dssp{$iter,$ii} eq "I"){ $Nhelix{$ii}++; }
-			# 		if(($dssp{$iter,$ii} eq "B")||($dssp{$iter,$ii} eq "E")){ $Nbeta{$ii}++; }
-			# 		if(($dssp{$iter,$ii} eq "~")||($dssp{$iter,$ii} eq "S")||($dssp{$iter,$ii} eq "T")){ $Ncoil{$ii}++; }
-			# 	}
-			# }
+			# get mindist of complex
+			if($pro eq "8200") {
+ 				foreach my $key (keys %insert_data) {
+					$insert_data{$key}[2] = '0.0';
+				}
+			} else {
+				unless(open $MINDIST,"<", $mindistfile) {
+					print $LOG "[ERROR] When attempting to open $mindistfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+					close($LOG);
+					close($WORK_FINISHED);
+					exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+					system("rm $lock");
+					die;
+				}
+				chomp(@mindist_lines = <$MINDIST>);
+				close($MINDIST);
+				foreach (@mindist_lines){
+					if (index($_, "#") != -1) {
+						next;
+					}
+					if (index($_, "@") != -1) {
+						next;
+					}
+					$mindist_trim_line = trim($_);
+					@mindist_values = split(/\s+/, $mindist_trim_line);
+					$mindist_time = int(sprintf("%.10g", $mindist_values[0]));
+					$mindist_value = sprintf("%.10g", $mindist_values[1]);
+					$insert_data{"$mindist_time"}[2] = $mindist_value; 
+				}
+			}
 
-			# for($ii = 0; $ii < $framesperwu; $ii++) { 
-			# 	@dssp_str = '';
-			# 	for($iter = 0; $iter < $resiter; $iter++) { 
-			# 		push @dssp_str,$dssp{$iter,$ii};
-			# 	}	
-			# 	$dssp_out{$ii} = "@dssp_str";
-			# 	for($dssp_out{$ii}){ s/ //g; }
-			# }
+			# get rg's #
+			unless(open $RG,"<", $gyratefile) {
+				print $LOG "[ERROR] When attempting to open $gyratefile for xtc=$work_unit. Unsetting lock and exiting...\n";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			chomp(@rg_lines = <$RG>);
+			close($RG);
+			foreach (@rg_lines){
+				if (index($_, "#") != -1) {
+					next;
+				}
+				if (index($_, "@") != -1) {
+					next;
+				}
+				$rg_trim_line = trim($_);
+				@rg_values = split(/\s+/, $rg_trim_line);
+				$rg_time = int($rg_values[0]);
+				$rg_value = $rg_values[1];
+				$insert_data{"$rg_time"}[3] = $rg_value;
+			}
 
-			# # adjust the time ;>) #
-			# for($iter=0; $iter<$itermax; $iter++){
-			# 	$framenew[$iter] = $f * $def_framesperwu + $iter;	 
-			# 	$tim = $framenew[$iter];
-			# 	$dssp_out2{$tim} = $dssp_out{$iter};
-			# 	$Nhelix2{$tim} = $Nhelix{$iter};
-			# 	$Nbeta2{$tim}  = $Nbeta{$iter};
-			# 	$Ncoil2{$tim}  = $Ncoil{$iter}; # to disclude terminal residues!!!
-			# }
-			# if(!($debug)){ system("rm *.xvg current_frame.* *.trr *.edr dd* *2.xtc md.log mdout.mdp energy.tpr \\#* ss.xpm ss.tmp gromp*"); }
+			# get vdW and QQ energies #
+			unless(open $ENERGY,"<", $energyfile) {
+				print $LOG "[ERROR] When attempting to open $energyfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			chomp(@energy_lines = <$ENERGY>);
+			close($ENERGY);
+			foreach (@energy_lines){
+				if (index($_, "#") != -1) {
+					next;
+				}
+				if (index($_, "@") != -1) {
+					next;
+				}
+				$energy_trim_line = trim($_);
+				@energy_values = split(/\s+/, $energy_trim_line);
+				$energy_time = int($energy_values[0]);
+				$vdw_value = $energy_values[1];
+				$qq_value = $energy_values[2];
+				$insert_data{"$energy_time"}[4] = $vdw_value;
+				$insert_data{"$energy_time"}[5] = $qq_value;
+			}
+			
+			# get dssp string #
+			foreach my $key (keys %insert_data) {
+				$insert_data{$key}[6] = '';
+			}
+			unless(open $DSSP,"<", $dsspfile) {
+				print $LOG "[ERROR] When attempting to open $dsspfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			chomp(@dssp_lines = <$DSSP>);
+			close($DSSP);
+			@dssp_x_axis;
+			$dssp_string = "";
+DSSP_OUTER: foreach (@dssp_lines){
+				if (index($_, "x-axis") != -1) {
+					$_ =~ s/\*//g;
+					$_ =~ s/\///g;
+					@_split = split(/:/, $_);
+					$x_vals_str = trim($_split[1]);
+					@dssp_x_axis = split(/\s+/, $x_vals_str);
+					next;
+				}
+				if (index($_, "*") != -1) {
+					next;
+				}
+				for my $c (split //, $_) {
+					if (looks_like_number($c)) {
+						next DSSP_OUTER;
+					}
+				}
+				$dssp_trim_line = trim($_);
+				$dssp_trim_line =~ s/,//;
+				$dssp_trim_line =~ s/"//g;
+				@dssp_vals = split(//, $dssp_trim_line);
+				for (my $i = 0; $i < scalar(@dssp_x_axis); $i++) {
+    				$insert_data{$dssp_x_axis[$i]}[6] = $insert_data{$dssp_x_axis[$i]}[6] . $dssp_vals[$i];
+				}
+			}
+
+			# get Nhelix, Nbeta, and Nccoil #
+			unless(open $DSSP_COUNTS,"<", $dsspcountsfile) {
+				print $LOG "[ERROR] When attempting to open $dsspcountsfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			chomp(@dssp_counts_lines = <$DSSP_COUNTS>);
+			close($DSSP_COUNTS);
+			foreach (@dssp_counts_lines){
+				if (index($_, "#") != -1) {
+					next;
+				}
+				if (index($_, "@") != -1) {
+					next;
+				}
+				$dssp_counts_trim_line = trim($_);
+				@dssp_counts_values = split(/\s+/, $dssp_counts_trim_line);
+				$dssp_counts_time = int($dssp_counts_values[0]);
+				$coil_value =  int($dssp_counts_values[2]);
+				$bsheet_value =  int($dssp_counts_values[3]);
+				$bbridge_value =  int($dssp_counts_values[4]);
+				$bend_value =  int($dssp_counts_values[5]);
+				$turn_value =  int($dssp_counts_values[6]);
+				$ahelix_value =  int($dssp_counts_values[7]);
+				$five_helix_value =  int($dssp_counts_values[8]);
+				$three_helix_value =  int($dssp_counts_values[9]);
+				$nhelix_val = $ahelix_value + $five_helix_value + $three_helix_value;
+				$nbeta_val = $bsheet_value + $bbridge_value;
+				$ncoil_val = $coil_value + $bend_value + $turn_value;
+				$insert_data{"$dssp_counts_time"}[7] = $nhelix_val;
+				$insert_data{"$dssp_counts_time"}[8] = $nbeta_val;
+				$insert_data{"$dssp_counts_time"}[9] = $ncoil_val;
+			}
+
+			############## MYSQL ###################
+			print $LOG "Obtained data points for all attributes, inserting into database...";
+			# Connecting to the db hosted on banana #
+			my $dbh = DBI->connect("DBI:mysql:$project_name:$dbserver","server","", { AutoCommit => 0 }) or do {
+				print $LOG "[ERROR] Can't connect to mysql database on $dbserver.";
+				close($LOG);
+				close($WORK_FINISHED);
+				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				system("rm $lock");
+				die;
+			}
+			print $LOG "Database connection established";
+			keys %insert_data;
+			foreach my $k (keys %insert_data) {
+				@v = @{$insert_data{$k}};
+				$sql_str = "INSERT IGNORE INTO TABLE $project_name (proj,run,clone,frame,rmsd_pro,rmsd_complex,mindist,rg_pro,E_vdw,E_qq,dssp,Nhelix,Nbeta,Ncoil,dateacquried,timeacquired) VALUES($pro,$r,$cln,$k,$v[0],$v[1],$v[2],$v[3],$v[4],$v[5],'$v[6]',$v[7],$v[8],$v[9],'$date','$time')"; # On duplicate primary key ignore
+				$statement = $dbh->prepare($sql_str);
+				$statement->execute();
+			}
+			$dbh->commit();
+			# Add entry to work finished #
+			print $WORK_FINISHED $queue_line . "\n";
+		} else {
+			print $LOG "[ERROR] MISSING EDR=$edr or TPR=$tpr. Unsetting lock and exiting...\n";
+			close($LOG);
+			close($WORK_FINISHED);
+			exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+			system("rm $lock"); 
 		}
 	} else {
 		print $LOG "[ERROR] MISSING XTC=$work_unit. Unsetting lock and exiting...\n";
 		close($LOG);
+		close($WORK_FINISHED);
+		exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
 		system("rm $lock"); 
 	}
 }
-
-############## MYSQL stuff: report values to logfile DB ###################
-	
-# 	print LOGFILE "$window $clientname $clientip ... ";
-
-# 		if(!($debug)){
-# 		$dbh = DBI->connect("DBI:mysql:project$pro:$dbserver",server,"") or print LOGFILE "Can't connect to FAH database on $dbserver ... ";
-# 	}	 
-# 	for($iter=0;$iter<$itermax;$iter++){	     
-# 		$frame = $framenew[$iter];
-# 		if(!($debug)){
-# 		$statement = $dbh->prepare("SELECT * FROM frames WHERE (run = '$r' AND clone = '$c' AND frame = '$frame')");
-# 		$statement->execute;
-# 		$existingrows = $statement->rows;
-
-# 		if ($existingrows) { 
-# 			if($iter == 0){ print LOGFILE "SKIPPING INSERT - JUST UPDATE ... "; }
-# 		} else { 
-# 			$statement = $dbh->prepare("INSERT INTO frames (run, clone, frame) VALUES ('$r','$c','$frame')");	
-# 			$statement->execute;
-# 		}
-# 		}
-# 		$query = "UPDATE frames SET rmsd = '$rms1{$frame}', Eint = '$Eint{$frame}', radiusgyr = '$radgyr{$frame}', dssp = '$dssp_out2{$frame}', Nhelix = '$Nhelix2{$frame}', Nbeta = '$Nbeta2{$frame}', Ncoil = '$Ncoil2{$frame}', acquired = '$timeaq'";
-# 		$query .= " WHERE ( run = '$r' AND clone = '$c' AND frame = '$frame' )"; 
-# 		print $LOG "Query $query\n\n";
-# 		if(!($debug)){
-# 		$statement = $dbh->prepare("$query");
-# 		$statement->execute;
-# 		$statement->finish;
-# 		}
-# 	}
-# 	print LOGFILE "\n";
-# 		if(!($debug)){ $dbh->disconnect; }
-
-# #print STDERR "Finishing input_records.prl $infile\n";
-# system("touch $analysis_dir/job_finished");
-# system("/bin/rm $analysis_dir/running_flag");
-# close(INFILE);
-# close(LOGFILE);
-# close($LOG);
-# if(!($debug)){ system("mv $logfile DONE/; mv $infile LOGS/; rm debug.log"); }
