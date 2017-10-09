@@ -322,13 +322,14 @@ while (my $queue_line = shift @queue_lines) {
 				$energy_trim_line = trim($_);
 				@energy_values = split(/\s+/, $energy_trim_line);
 				$energy_time = int($energy_values[0]);
-				$vdw_value = $energy_values[1];
-				$qq_value = $energy_values[2];
+				$qq_value = $energy_values[1];
+				$vdw_value = $energy_values[2];
 				$insert_data{"$energy_time"}[4] = $vdw_value;
 				$insert_data{"$energy_time"}[5] = $qq_value;
 			}
 			
 			# get dssp string #
+			keys %insert_data;
 			foreach my $key (keys %insert_data) {
 				$insert_data{$key}[6] = '';
 			}
