@@ -11,7 +11,7 @@ sub trim($) {
 
 # Exit on error function
 sub exit_on_error {
-	my($s_dir, $q_file, @q_lines, $curr_q_line) = @_;
+	my($s_dir, $q_file, @q_lines) = @_;
 	system("rm $s_dir/*");
 	open my $NEW_Q, ">", $q_file;
 	$curr_q_line = pop(@q_lines);
@@ -196,7 +196,7 @@ while ($queue_line = shift(@queue_lines)) {
 				print $LOG "[ERROR] When attempting to open $rmsdfile for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				&exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			}
@@ -222,7 +222,7 @@ while ($queue_line = shift(@queue_lines)) {
 				print $LOG "[ERROR] When attempting to open $rmsdcomplexfile for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			}
@@ -253,7 +253,7 @@ while ($queue_line = shift(@queue_lines)) {
 					print $LOG "[ERROR] When attempting to open $mindistfile for xtc=$work_unit. Unsetting lock and exiting...\n";
 					close($LOG);
 					close($WORK_FINISHED);
-					exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+					exit_on_error($sandbox_dir, $queue, @queue_lines);
 					system("rm $lock");
 					die;
 				}
@@ -280,7 +280,7 @@ while ($queue_line = shift(@queue_lines)) {
 				print $LOG "[ERROR] When attempting to open $gyratefile for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			}
@@ -306,7 +306,7 @@ while ($queue_line = shift(@queue_lines)) {
 				print $LOG "[ERROR] When attempting to open $energyfile for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			}
@@ -338,7 +338,7 @@ while ($queue_line = shift(@queue_lines)) {
 				print $LOG "[ERROR] When attempting to open $dsspfile for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			}
@@ -378,7 +378,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 				print $LOG "[ERROR] When attempting to open $dsspcountsfile for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			}
@@ -418,7 +418,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 				print $LOG "[ERROR] Can't connect to mysql database on $dbserver.\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			};
@@ -437,7 +437,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 					print $LOG "[ERROR] On insert=$sql_str. $stmnt_err ... Unsetting lock and exiting...\n";
 					close($LOG);
 					close($WORK_FINISHED);
-					exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+					exit_on_error($sandbox_dir, $queue, @queue_lines);
 					system("rm $lock");
 					die;
 				}
@@ -450,7 +450,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 				print $LOG "[ERROR] On committing data to database. Rollingback changes, unsetting lock, and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
 			}
@@ -464,7 +464,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 			print $LOG "[ERROR] MISSING EDR=$edr or TPR=$tpr. Unsetting lock and exiting...\n";
 			close($LOG);
 			close($WORK_FINISHED);
-			exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+			exit_on_error($sandbox_dir, $queue, @queue_lines);
 			system("rm $lock");
 			die;
 		}
@@ -472,7 +472,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 		print $LOG "[ERROR] MISSING XTC=$work_unit. Unsetting lock and exiting...\n";
 		close($LOG);
 		close($WORK_FINISHED);
-		exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+		exit_on_error($sandbox_dir, $queue, @queue_lines);
 		system("rm $lock");
 		die;
 	}
