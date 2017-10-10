@@ -426,34 +426,30 @@ DSSP_OUTER: foreach (@dssp_lines){
 			keys %insert_data;
 			foreach my $k (keys %insert_data) {
 				@v = @{$insert_data{$k}};
-				# On duplicate primary key ignore
+				# On duplicate primary key log and ignore
 				$sql_str = "INSERT INTO $project_name (proj,run,clone,frame,rmsd_pro,rmsd_complex,mindist,rg_pro,E_vdw,E_qq,dssp,Nhelix,Nbeta,Ncoil,dateacquried,timeacquired) VALUES($pro,$r,$cln,$k,$v[0],$v[1],$v[2],$v[3],$v[4],$v[5],'$v[6]',$v[7],$v[8],$v[9],'$date','$time')";
-				eval {
-					$statement = $dbh->prepare($sql_str);
-					$statement->execute();
-				};
-				if($@) {
+				$statement = $dbh->prepare($sql_str) or do{
 					$stmnt_err = $statement->errstr();
-					print $LOG "[ERROR] On insert=$sql_str. $stmnt_err ... Unsetting lock and exiting...\n";
+					print $LOG "[ERROR] On preparing SQL statement=$sql_str : $stmnt_err Unsetting lock, and exiting...\n";
 					close($LOG);
 					close($WORK_FINISHED);
 					exit_on_error($sandbox_dir, $queue, @queue_lines);
 					system("rm $lock");
 					die;
-				}
+				};
+				$statement->execute() or do {
+					$stmnt_err = $statement->errstr();
+					print $LOG "[WARNING] On insert=$sql_str: $stmnt_err";
+				};
 			}
-			eval {
-				$dbh->commit();
-			};
-			if($@){
-				$dbh->rollback();
-				print $LOG "[ERROR] On committing data to database. Rollingback changes, unsetting lock, and exiting...\n";
+			$dbh->commit() or do {
+				print $LOG "[ERROR] On committing data to database.Unsetting lock, and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
 				exit_on_error($sandbox_dir, $queue, @queue_lines);
 				system("rm $lock");
 				die;
-			}
+			};
 			print $LOG "Committed inserts to database.\n";
 			# Add entry to work finished #
 			print $WORK_FINISHED $queue_line . "\n";
