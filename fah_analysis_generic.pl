@@ -31,8 +31,8 @@ my $sandbox_dir = "$analysis_dir/sandbox";
 my $log_dir = "$analysis_dir/analyzer-logs";
 # Files #
 my $log = "$log_dir/analyzer.log";
-my $queue = "$analysis_dir/queue_test.txt";
-my $work_finished = "$analysis_dir/done_test.txt";
+my $queue = "$analysis_dir/queue.txt";
+my $work_finished = "$analysis_dir/done.txt";
 my $lock = "$analysis_dir/lock.txt";
 # DB #
 my $dbserver = "134.139.52.4:3306";
@@ -91,7 +91,7 @@ if (-e $work_finished) {
 print $LOG "Sanity check: queue & work_finished passed. Continuing...\n";
 
 #################### get frame info #########################
-WU_LOOP: while ($queue_line = shift(@queue_lines)) { 
+while ($queue_line = shift(@queue_lines)) { 
 	my @queue_data = split(/\t/, $queue_line);
 	my $project_name = trim($queue_data[0]);
 	my $work_unit = trim($queue_data[1]);
@@ -442,7 +442,6 @@ DSSP_OUTER: foreach (@dssp_lines){
 					# Primary key violation
 					if (index($stmnt_err, "Duplicate") != -1) {
 						print $LOG "[WARNING] $stmnt_err\n";
-						next WU_LOOP;
 					} else {
 						print $LOG "[ERROR] Unexpected SQL execution error: $stmnt_err Unsetting lock and exiting...\n";
 						close($LOG);
