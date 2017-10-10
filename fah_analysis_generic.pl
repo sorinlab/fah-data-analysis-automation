@@ -430,7 +430,7 @@ DSSP_OUTER: foreach (@dssp_lines){
 				$sql_str = "INSERT INTO $project_name (proj,run,clone,frame,rmsd_pro,rmsd_complex,mindist,rg_pro,E_vdw,E_qq,dssp,Nhelix,Nbeta,Ncoil,dateacquried,timeacquired) VALUES($pro,$r,$cln,$k,$v[0],$v[1],$v[2],$v[3],$v[4],$v[5],'$v[6]',$v[7],$v[8],$v[9],'$date','$time')";
 				$statement = $dbh->prepare($sql_str) or do{
 					$stmnt_err = $statement->errstr();
-					print $LOG "[ERROR] On preparing SQL statement=$sql_str : $stmnt_err Unsetting lock, and exiting...\n";
+					print $LOG "[ERROR] On preparing SQL statement=$sql_str : $stmnt_err Unsetting lock and exiting...\n";
 					close($LOG);
 					close($WORK_FINISHED);
 					exit_on_error($sandbox_dir, $queue, @queue_lines);
@@ -439,7 +439,17 @@ DSSP_OUTER: foreach (@dssp_lines){
 				};
 				$statement->execute() or do {
 					$stmnt_err = $statement->errstr();
-					print $LOG "[WARNING] On insert=$sql_str: $stmnt_err";
+					# Primary key violation
+					if (index($stmnt_err, "Duplicate") != -1) {
+						print $LOG "[WARNING] $stmnt_err\n";
+					} else {
+						print $LOG "[ERROR] Unexpected SQL execution error: $stmnt_err Unsetting lock and exiting...\n";
+						close($LOG);
+						close($WORK_FINISHED);
+						exit_on_error($sandbox_dir, $queue, @queue_lines);
+						system("rm $lock");
+						die;
+					}
 				};
 			}
 			$dbh->commit() or do {
