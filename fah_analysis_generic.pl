@@ -13,12 +13,12 @@ sub trim($) {
 sub exit_on_error {
 	my($s_dir, $q_file, @q_lines, $curr_q_line) = @_;
 	system("rm $s_dir/*");
-	$qu_lines = $curr_q_line . "\n";
-	foreach (@q_lines) {
-		$qu_lines = $qu_lines . $_ . "\n";
-	}
 	open my $NEW_Q, ">", $q_file;
-	print $NEW_Q $qu_lines;
+	$curr_q_line = pop(@q_lines);
+	print $NEW_Q $curr_q_line . "\n";
+	foreach (@q_lines) {
+		print $NEW_Q $_ . "\n";
+	}
 	close($NEW_Q);
 }
 
@@ -28,10 +28,11 @@ my $home_dir = "/home/server/server2";
 my $analysis_dir = "$home_dir/analysis";
 my $fah_files = "$analysis_dir/fah-files";
 my $sandbox_dir = "$analysis_dir/sandbox";
+my $log_dir = "$analysis_dir/analyzer-logs";
 # Files #
-my $log = "$analysis_dir/analyzer-logs/analyzer.log";
-my $queue = "$analysis_dir/queue.txt";
-my $work_finished = "$analysis_dir/done.txt";
+my $log = "$log_dir/analyzer.log";
+my $queue = "$analysis_dir/queue_test.txt";
+my $work_finished = "$analysis_dir/done_test.txt";
 my $lock = "$analysis_dir/lock.txt";
 # DB #
 my $dbserver = "134.139.52.4:3306";
@@ -90,7 +91,7 @@ if (-e $work_finished) {
 print $LOG "Sanity check: queue & work_finished passed. Continuing...\n";
 
 #################### get frame info #########################
-while (my $queue_line = shift @queue_lines) { 
+while ($queue_line = shift(@queue_lines)) { 
 	my @queue_data = split(/\t/, $queue_line);
 	my $project_name = trim($queue_data[0]);
 	my $work_unit = trim($queue_data[1]);
@@ -195,7 +196,7 @@ while (my $queue_line = shift @queue_lines) {
 				print $LOG "[ERROR] When attempting to open $rmsdfile for xtc=$work_unit. Unsetting lock and exiting...\n";
 				close($LOG);
 				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
+				&exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
 				system("rm $lock");
 				die;
 			}
@@ -420,13 +421,13 @@ DSSP_OUTER: foreach (@dssp_lines){
 				exit_on_error($sandbox_dir, $queue, @queue_lines, $queue_line);
 				system("rm $lock");
 				die;
-			}
-			print $LOG "Database connection established";
+			};
+			print $LOG "Database connection established\n";
 			keys %insert_data;
 			foreach my $k (keys %insert_data) {
 				@v = @{$insert_data{$k}};
 				# On duplicate primary key ignore
-				$sql_str = "INSERT IGNORE INTO TABLE $project_name (proj,run,clone,frame,rmsd_pro,rmsd_complex,mindist,rg_pro,E_vdw,E_qq,dssp,Nhelix,Nbeta,Ncoil,dateacquried,timeacquired) VALUES($pro,$r,$cln,$k,$v[0],$v[1],$v[2],$v[3],$v[4],$v[5],'$v[6]',$v[7],$v[8],$v[9],'$date','$time')";
+				$sql_str = "INSERT INTO $project_name (proj,run,clone,frame,rmsd_pro,rmsd_complex,mindist,rg_pro,E_vdw,E_qq,dssp,Nhelix,Nbeta,Ncoil,dateacquried,timeacquired) VALUES($pro,$r,$cln,$k,$v[0],$v[1],$v[2],$v[3],$v[4],$v[5],'$v[6]',$v[7],$v[8],$v[9],'$date','$time')";
 				eval {
 					$statement = $dbh->prepare($sql_str);
 					$statement->execute();
@@ -483,7 +484,7 @@ open my $QUEUE_CLEAR, ">", $queue or do {
 	close($WORK_FINISHED);
 	system("rm $lock");
 	die;
-}
+};
 print $LOG "Cleared the queue.\n";
 close($QUEUE_CLEAR);
 close($WORK_FINISHED);
