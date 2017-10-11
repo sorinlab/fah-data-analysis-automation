@@ -31,8 +31,8 @@ my $sandbox_dir = "$analysis_dir/sandbox";
 my $log_dir = "$analysis_dir/analyzer-logs";
 # Files #
 my $log = "$log_dir/analyzer.log";
-my $queue = "$analysis_dir/queue.txt";
-my $work_finished = "$analysis_dir/done.txt";
+my $queue = "$analysis_dir/queue_test.txt";
+my $work_finished = "$analysis_dir/done_test.txt";
 my $lock = "$analysis_dir/lock.txt";
 # DB #
 my $dbserver = "134.139.52.4:3306";
@@ -215,7 +215,7 @@ while ($queue_line = shift(@queue_lines)) {
 				@rmsd_values = split(/\s+/, $rmsd_trim_line);
 				$rmsd_time = int($rmsd_values[0]);
 				$rmsd_value = $rmsd_values[1];
-				$insert_data{"$rmsd_time"}[0] = $rmsd_value; 
+				$insert_data{"$rmsd_time"}[0] = 10 * $rmsd_value; 
 			}
 
 			# get complex rmsd's #
@@ -246,7 +246,7 @@ while ($queue_line = shift(@queue_lines)) {
 					@rmsd_complex_values = split(/\s+/, $rmsd_complex_trim_line);
 					$rmsd_complex_time = int($rmsd_complex_values[0]);
 					$rmsd_complex_value = $rmsd_complex_values[1];
-					$insert_data{"$rmsd_complex_time"}[1] = $rmsd_complex_value; 
+					$insert_data{"$rmsd_complex_time"}[1] = 10 * $rmsd_complex_value; 
 				}
 			}
 
@@ -278,7 +278,7 @@ while ($queue_line = shift(@queue_lines)) {
 					@mindist_values = split(/\s+/, $mindist_trim_line);
 					$mindist_time = int(sprintf("%.10g", $mindist_values[0]));
 					$mindist_value = sprintf("%.10g", $mindist_values[1]);
-					$insert_data{"$mindist_time"}[2] = $mindist_value; 
+					$insert_data{"$mindist_time"}[2] = 10 * $mindist_value; 
 				}
 			}
 
@@ -305,7 +305,7 @@ while ($queue_line = shift(@queue_lines)) {
 				@rg_values = split(/\s+/, $rg_trim_line);
 				$rg_time = int($rg_values[0]);
 				$rg_value = $rg_values[1];
-				$insert_data{"$rg_time"}[3] = $rg_value;
+				$insert_data{"$rg_time"}[3] = 10 * $rg_value;
 			}
 
 			# get vdW and QQ energies #
