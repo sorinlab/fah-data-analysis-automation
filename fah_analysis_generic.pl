@@ -176,8 +176,8 @@ while ($queue_line = shift(@queue_lines)) {
 
 			# generate gromacs data files #
 			# for sans inhibitor / PROJ8200 #
-			if($pro eq "8200") {
-				system("echo 1 1 | g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdcomplexfile"); 
+			$in_proj_8200 = ($pro eq "8200") ? 1 : 0;
+			if($in_proj_8200) {
 				system("echo 1 1 | g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdfile");
 			} else {
 				system("echo 1 24 | g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdcomplexfile"); # for complexes
@@ -189,8 +189,9 @@ while ($queue_line = shift(@queue_lines)) {
 			# for vdW and QQ energies #
 			# Set this value to 0.0 for PROJ8200 with no inhibitor present #
 			# 48 and 49 should be named similar to LJ-SR:Protein-DP2 and Coul-SR:Protein-DP2 #
-			system("echo 48 49 | g_energy -s $tprfile -f $edrfile -o $energyfile");
-
+			if(!$in_proj_8200) {
+				system("echo 48 49 | g_energy -s $tprfile -f $edrfile -o $energyfile");
+			}
 			# get protein rmsd's #
 			unless(open $RMS,"<", $rmsdfile) {
 				print $LOG "[ERROR] When attempting to open $rmsdfile for xtc=$work_unit. Unsetting lock and exiting...\n";
@@ -218,33 +219,39 @@ while ($queue_line = shift(@queue_lines)) {
 			}
 
 			# get complex rmsd's #
-			unless(open $RMS_COMPLEX,"<", $rmsdcomplexfile) {
-				print $LOG "[ERROR] When attempting to open $rmsdcomplexfile for xtc=$work_unit. Unsetting lock and exiting...\n";
-				close($LOG);
-				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines);
-				system("rm $lock");
-				die;
-			}
-			chomp(@rmsd_complex_lines = <$RMS_COMPLEX>);
-			close($RMS_COMPLEX);
-			print $LOG "Getting complex RMSD's...\n";
-			foreach (@rmsd_complex_lines){
-				if (index($_, "#") != -1) {
-					next;
+			if($in_proj_8200) {
+ 				foreach my $key (keys %insert_data) {
+					$insert_data{$key}[1] = '0.0';
 				}
-				if (index($_, "@") != -1) {
-					next;
+			} else {
+				unless(open $RMS_COMPLEX,"<", $rmsdcomplexfile) {
+					print $LOG "[ERROR] When attempting to open $rmsdcomplexfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+					close($LOG);
+					close($WORK_FINISHED);
+					exit_on_error($sandbox_dir, $queue, @queue_lines);
+					system("rm $lock");
+					die;
 				}
-				$rmsd_complex_trim_line = trim($_);
-				@rmsd_complex_values = split(/\s+/, $rmsd_complex_trim_line);
-				$rmsd_complex_time = int($rmsd_complex_values[0]);
-				$rmsd_complex_value = $rmsd_complex_values[1];
-				$insert_data{"$rmsd_complex_time"}[1] = $rmsd_complex_value; 
+				chomp(@rmsd_complex_lines = <$RMS_COMPLEX>);
+				close($RMS_COMPLEX);
+				print $LOG "Getting complex RMSD's...\n";
+				foreach (@rmsd_complex_lines){
+					if (index($_, "#") != -1) {
+						next;
+					}
+					if (index($_, "@") != -1) {
+						next;
+					}
+					$rmsd_complex_trim_line = trim($_);
+					@rmsd_complex_values = split(/\s+/, $rmsd_complex_trim_line);
+					$rmsd_complex_time = int($rmsd_complex_values[0]);
+					$rmsd_complex_value = $rmsd_complex_values[1];
+					$insert_data{"$rmsd_complex_time"}[1] = $rmsd_complex_value; 
+				}
 			}
-			
+
 			# get mindist of complex
-			if($pro eq "8200") {
+			if($in_proj_8200) {
  				foreach my $key (keys %insert_data) {
 					$insert_data{$key}[2] = '0.0';
 				}
@@ -302,31 +309,38 @@ while ($queue_line = shift(@queue_lines)) {
 			}
 
 			# get vdW and QQ energies #
-			unless(open $ENERGY,"<", $energyfile) {
-				print $LOG "[ERROR] When attempting to open $energyfile for xtc=$work_unit. Unsetting lock and exiting...\n";
-				close($LOG);
-				close($WORK_FINISHED);
-				exit_on_error($sandbox_dir, $queue, @queue_lines);
-				system("rm $lock");
-				die;
-			}
-			chomp(@energy_lines = <$ENERGY>);
-			close($ENERGY);
-			print $LOG "Getting vdW and QQ energies...\n";
-			foreach (@energy_lines){
-				if (index($_, "#") != -1) {
-					next;
+			if($in_proj_8200) {
+ 				foreach my $key (keys %insert_data) {
+					$insert_data{$key}[4] = '0.0';
+					$insert_data{$key}[5] = '0.0';
 				}
-				if (index($_, "@") != -1) {
-					next;
+			} else {
+				unless(open $ENERGY,"<", $energyfile) {
+					print $LOG "[ERROR] When attempting to open $energyfile for xtc=$work_unit. Unsetting lock and exiting...\n";
+					close($LOG);
+					close($WORK_FINISHED);
+					exit_on_error($sandbox_dir, $queue, @queue_lines);
+					system("rm $lock");
+					die;
 				}
-				$energy_trim_line = trim($_);
-				@energy_values = split(/\s+/, $energy_trim_line);
-				$energy_time = int($energy_values[0]);
-				$qq_value = $energy_values[1];
-				$vdw_value = $energy_values[2];
-				$insert_data{"$energy_time"}[4] = $vdw_value;
-				$insert_data{"$energy_time"}[5] = $qq_value;
+				chomp(@energy_lines = <$ENERGY>);
+				close($ENERGY);
+				print $LOG "Getting vdW and QQ energies...\n";
+				foreach (@energy_lines){
+					if (index($_, "#") != -1) {
+						next;
+					}
+					if (index($_, "@") != -1) {
+						next;
+					}
+					$energy_trim_line = trim($_);
+					@energy_values = split(/\s+/, $energy_trim_line);
+					$energy_time = int($energy_values[0]);
+					$qq_value = $energy_values[1];
+					$vdw_value = $energy_values[2];
+					$insert_data{"$energy_time"}[4] = $vdw_value;
+					$insert_data{"$energy_time"}[5] = $qq_value;
+				}
 			}
 			
 			# get dssp string #
