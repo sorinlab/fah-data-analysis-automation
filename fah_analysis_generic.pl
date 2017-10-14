@@ -31,8 +31,8 @@ my $sandbox_dir = "$analysis_dir/sandbox";
 my $log_dir = "$analysis_dir/analyzer-logs";
 # Files #
 my $log = "$log_dir/analyzer.log";
-my $queue = "$analysis_dir/queue_test.txt";
-my $work_finished = "$analysis_dir/done_test.txt";
+my $queue = "$analysis_dir/queue.txt";
+my $work_finished = "$analysis_dir/done.txt";
 my $lock = "$analysis_dir/lock.txt";
 # DB #
 my $dbserver = "134.139.52.4:3306";
