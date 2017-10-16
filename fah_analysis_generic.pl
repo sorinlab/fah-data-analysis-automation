@@ -12,14 +12,17 @@ sub trim($) {
 # Exit on error function
 sub exit_on_error {
 	my($s_dir, $q_file, @q_lines) = @_;
-	system("rm $s_dir/*");
 	open my $NEW_Q, ">", $q_file;
-	$curr_q_line = pop(@q_lines);
-	print $NEW_Q $curr_q_line . "\n";
 	foreach (@q_lines) {
 		print $NEW_Q $_ . "\n";
 	}
 	close($NEW_Q);
+}
+
+# Double check that the time step is divisible by 100(ps)
+sub time_step_sanity_check {
+	my($time_val) = @_;
+	return (($time_val % 100) == 0);
 }
 
 #######################	setup I/O ############################
@@ -29,6 +32,7 @@ my $analysis_dir = "$home_dir/analysis";
 my $fah_files = "$analysis_dir/fah-files";
 my $sandbox_dir = "$analysis_dir/sandbox";
 my $log_dir = "$analysis_dir/analyzer-logs";
+my $tmp_dir = "$analysis_dir/tmp";
 # Files #
 my $log = "$log_dir/analyzer.log";
 my $queue = "$analysis_dir/queue.txt";
@@ -214,6 +218,9 @@ while ($queue_line = shift(@queue_lines)) {
 				$rmsd_trim_line = trim($_);
 				@rmsd_values = split(/\s+/, $rmsd_trim_line);
 				$rmsd_time = int($rmsd_values[0]);
+				if (!time_step_sanity_check($rmsd_time)) {
+					next;
+				}
 				$rmsd_value = $rmsd_values[1];
 				$insert_data{"$rmsd_time"}[0] = 10 * $rmsd_value; 
 			}
@@ -244,9 +251,12 @@ while ($queue_line = shift(@queue_lines)) {
 					}
 					$rmsd_complex_trim_line = trim($_);
 					@rmsd_complex_values = split(/\s+/, $rmsd_complex_trim_line);
-					$rmsd_complex_time = int($rmsd_complex_values[0]);
+					$rmsd_complex_time = int($rmsd_complex_values[0]); 
+					if (!time_step_sanity_check($rmsd_complex_time)) {
+                                        	next;
+					}
 					$rmsd_complex_value = $rmsd_complex_values[1];
-					$insert_data{"$rmsd_complex_time"}[1] = 10 * $rmsd_complex_value; 
+                                	$insert_data{"$rmsd_complex_time"}[1] = 10 * $rmsd_complex_value; 
 				}
 			}
 
@@ -277,8 +287,11 @@ while ($queue_line = shift(@queue_lines)) {
 					$mindist_trim_line = trim($_);
 					@mindist_values = split(/\s+/, $mindist_trim_line);
 					$mindist_time = int(sprintf("%.10g", $mindist_values[0]));
+					if (!time_step_sanity_check($mindist_time)) {
+                                        	next;
+					}
 					$mindist_value = sprintf("%.10g", $mindist_values[1]);
-					$insert_data{"$mindist_time"}[2] = 10 * $mindist_value; 
+                                	$insert_data{"$mindist_time"}[2] = 10 * $mindist_value; 
 				}
 			}
 
@@ -304,6 +317,9 @@ while ($queue_line = shift(@queue_lines)) {
 				$rg_trim_line = trim($_);
 				@rg_values = split(/\s+/, $rg_trim_line);
 				$rg_time = int($rg_values[0]);
+				if (!time_step_sanity_check($rg_time)) {
+                                        next;
+                                }
 				$rg_value = $rg_values[1];
 				$insert_data{"$rg_time"}[3] = 10 * $rg_value;
 			}
@@ -336,6 +352,9 @@ while ($queue_line = shift(@queue_lines)) {
 					$energy_trim_line = trim($_);
 					@energy_values = split(/\s+/, $energy_trim_line);
 					$energy_time = int($energy_values[0]);
+					if (!time_step_sanity_check($energy_time)) {
+                                        	next;
+                                	}
 					$qq_value = $energy_values[1];
 					$vdw_value = $energy_values[2];
 					$insert_data{"$energy_time"}[4] = $vdw_value;
@@ -383,7 +402,11 @@ DSSP_OUTER: foreach (@dssp_lines){
 				$dssp_trim_line =~ s/"//g;
 				@dssp_vals = split(//, $dssp_trim_line);
 				for (my $i = 0; $i < scalar(@dssp_x_axis); $i++) {
-    				$insert_data{$dssp_x_axis[$i]}[6] = $insert_data{$dssp_x_axis[$i]}[6] . $dssp_vals[$i];
+					$x_value = int($dssp_x_axis[$i]);
+					if (!time_step_sanity_check($x_value)) {
+						next;
+					}
+    					$insert_data{$dssp_x_axis[$i]}[6] = $insert_data{$dssp_x_axis[$i]}[6] . $dssp_vals[$i];
 				}
 			}
 
@@ -409,6 +432,9 @@ DSSP_OUTER: foreach (@dssp_lines){
 				$dssp_counts_trim_line = trim($_);
 				@dssp_counts_values = split(/\s+/, $dssp_counts_trim_line);
 				$dssp_counts_time = int($dssp_counts_values[0]);
+				if (!time_step_sanity_check($dssp_counts_time)) {
+					next;
+				}
 				$coil_value =  int($dssp_counts_values[2]);
 				$bsheet_value =  int($dssp_counts_values[3]);
 				$bbridge_value =  int($dssp_counts_values[4]);
@@ -480,6 +506,8 @@ DSSP_OUTER: foreach (@dssp_lines){
 			print $LOG "Successfully analyzed and inserted data for WU=$work_unit. Added this entry $work_finished.\n";
 			# Clear sandbox #
 			system("rm $sandbox_dir/*");
+			# Clear tmp #
+			system("rm $tmp_dir/*");
 		} else {
 			print $LOG "[ERROR] MISSING EDR=$edr or TPR=$tpr. Unsetting lock and exiting...\n";
 			close($LOG);
