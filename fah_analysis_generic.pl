@@ -12,6 +12,7 @@ sub trim($) {
 # Exit on error function
 sub exit_on_error {
 	my($s_dir, $q_file, @q_lines) = @_;
+        system("rm $s_dir/*");
 	open my $NEW_Q, ">", $q_file;
 	foreach (@q_lines) {
 		print $NEW_Q $_ . "\n";
@@ -41,17 +42,15 @@ my $lock = "$analysis_dir/lock.txt";
 # DB #
 my $dbserver = "134.139.52.4:3306";
 
-#######################	Open Logger ############################
+################## Open Logger & Set Lock ###################
 # This script always writes to a log file
 # Status updates, warnings and errors will appear in this file
-open my $LOG, ">>", $log || die "\nError: can't open analyzer.log\n\n";
 
-#######################	Set Lock ############################
 if (-e $lock) {
-	print $LOG "[WARNING] Lock set. Exiting...\n";
-	close($LOG);
+        print "[WARNING] Lock=$lock is set. Exiting...\n";
 	die;
 } else {
+        open $LOG, ">>", $log || die "\nError: can't open analyzer.log\n\n";
 	print $LOG "Analyzer starting...\n";
 	my $sys_call_error = system("touch $lock"); 
 	if($sys_call_error) {
@@ -60,6 +59,7 @@ if (-e $lock) {
 		die;
 	}
 }
+
 
 ################ Sanity check: queue & work_finished  ######################
 if (-e $queue) {
