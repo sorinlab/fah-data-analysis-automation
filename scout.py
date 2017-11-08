@@ -8,35 +8,38 @@ import os
 import sys
 from collections import deque
 from config import SCOUT_CONFIGURATION as SC
+from error_reporting_bot import post_message
 
 # Sample configuration ###
 # SCOUT_CONFIGURATION = {
 #     'projects': {
-#         # Project Set ("Codename")
+# Project Set ("Codename")
 #         'Test': {
-#             # Project Directories
+# Project Directories
 #             'directories': {
-#                 # Boolean to determine if a Project is scoutable
-#                 # If true, scout the project for work
+# Boolean to determine if a Project is scoutable
+# If true, scout the project for work
 #                 '/.../PROJ8299': True
 #             },
-#             # Boolean to determine if a Project Set is scoutable
-#             # If true, iterate over 'directories'
+# Boolean to determine if a Project Set is scoutable
+# If true, iterate over 'directories'
 #             'scoutable': True
 #         }
 #     },
-#     # Path to lock file
-#     # If lock file exists do not execute scout
+# Path to lock file
+# If lock file exists do not execute scout
 #     'lock': '/.../lock.txt',
-#     # Path to queue
+# Path to queue
 #     'queue': '/.../queue.txt',
-#     # Path to work completed log
-#     # If a to-be-analyzed frame exists in work_completed do not queue
+# Path to work completed log
+# If a to-be-analyzed frame exists in work_completed do not queue
 #     'work_completed': '/.../done.txt',
-#     # Path to file that logs events that occur during normal operation
+# Path to file that logs events that occur during normal operation
 #     'log' : '/.../scout.log',
-#     # Path to file that logs errors regarding a particular runtime event
-#     'error_log' : '/.../scout-error.log'
+# Path to file that logs errors regarding a particular runtime event
+#     'error_log' : '/.../scout-error.log',
+# Webhook (Slack) for the scout to POST error messages
+#     'webhook' : 'https://<url>.<goes>.<here>/...'
 # }
 
 # Set the format of the entries to begin with a timestamp
@@ -56,14 +59,18 @@ def setup_logger(name, log_file, level=logging.INFO):
     return logger
 
 # Set up info and error logs
-LOG = setup_logger('log', SC['log'])
-ERROR_LOG = setup_logger('error_log', SC['error_log'])
+try:
+    LOG = setup_logger('log', SC['log'])
+    ERROR_LOG = setup_logger('error_log', SC['error_log'])
+except IOError as err:
+    post_message(
+        '[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to setup loggers.'.format(err.errno, err.strerror))
+    sys.exit(1)
 
 # Check fo the existence of a lock file
 # If present exit, otherwise set lock and continue
 LOCK = SC['lock']
 if os.path.isfile(LOCK):
-    LOG.warning(': [WARNING] Lock set. Exiting...')
     sys.exit()
 else:
     try:
@@ -75,6 +82,8 @@ else:
             ': [ERROR] I/O Error(%d): %s. Occurred when attempting to set lock=%s. Check the configuration for errors regarding the \'lock\' setting.', err.errno, err.strerror, LOCK)
         LOG.warning(
             ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+        post_message(
+            '[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to set lock={}.'.format(err.errno, err.strerror, LOCK))
         sys.exit(1)
 
 # Make a set of all the currently queued WU's
@@ -87,6 +96,8 @@ else:
         ': [ERROR] The queue file %s does not exist. Check the configuration for errors regarding the \'queue\' setting.', QUEUE)
     LOG.warning(
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    post_message(
+        '[ERROR] in scout.py. The queue file {} does not exist.'.format(QUEUE))
     os.unlink(LOCK)
     sys.exit(1)
 try:
@@ -97,6 +108,8 @@ except IOError as err:
         ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. Check the configuration for errors regarding the \'queue\' setting.', err.errno, err.strerror, QUEUE)
     LOG.warning(
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    post_message(
+        '[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to open queue={}.'.format(err.errno, err.strerror, QUEUE))
     os.unlink(LOCK)
     sys.exit(1)
 WORK_QUEUED_SET = set()
@@ -116,6 +129,8 @@ else:
         ': [ERROR] The done (work finished) file %s does not exist. Check the configuration for errors regarding the \'work_completed\' setting.', WORK_COMPLETED)
     LOG.warning(
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    post_message(
+        '[ERROR] in scout.py. The done (work finished) file {} does not exist.'.format(WORK_COMPLETED))
     os.unlink(LOCK)
     sys.exit(1)
 try:
@@ -126,6 +141,8 @@ except IOError as err:
         ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open work_completed=%s. Check the configuration for errors regarding the \'work_completed\' setting.', err.errno, err.strerror, WORK_COMPLETED)
     LOG.warning(
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    post_message('[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to open work_completed={}.'.format(
+        err.errno, err.strerror, WORK_COMPLETED))
     os.unlink(LOCK)
     sys.exit(1)
 WORK_COMPLETED_SET = set()
@@ -175,7 +192,8 @@ for project_name, directory in WORK:
                 if xtc_path in CONTINUE_SET:
                     continue
                 else:
-                    ENQUEUE.appendleft('{:<10}\t{:<}'.format(project_name, xtc_path))
+                    ENQUEUE.appendleft(
+                        '{:<10}\t{:<}'.format(project_name, xtc_path))
 
 # Write enqueue list entries to the queue
 LOG.info(': Writing %d entries to queue.', len(ENQUEUE))
@@ -189,6 +207,8 @@ except IOError as err:
     LOG.warning(
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
     os.unlink(LOCK)
+    post_message(
+        '[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to open queue={}.'.format(err.errno, err.strerror, QUEUE))
     sys.exit(1)
 
 LOG.info(': Sorting the queue.')
@@ -202,6 +222,8 @@ except IOError as err:
     LOG.warning(
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
     os.unlink(LOCK)
+    post_message(
+        '[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to open queue={}. This error is unexpected and could mean that the queue was deleted intermittently.'.format(err.errno, err.strerror, QUEUE))
     sys.exit(1)
 try:
     with open(QUEUE, mode='w') as queue_file:
@@ -213,6 +235,8 @@ except IOError as err:
         ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open queue=%s. This error is unexpected and could mean that the queue was deleted intermittently.', err.errno, err.strerror, QUEUE)
     LOG.warning(
         ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    post_message(
+        '[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to open queue={}. This error is unexpected and could mean that the queue was deleted intermittently.'.format(err.errno, err.strerror, QUEUE))
     os.unlink(LOCK)
     sys.exit(1)
 
