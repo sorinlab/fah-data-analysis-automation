@@ -28,4 +28,6 @@ SCOUT_CONFIGURATION = {
     'log' : '/.../.../.../scout.log',
     # Path to file that logs errors regarding a particular runtime event
     'error_log' : '/.../.../.../scout-error.log'
+    # Slack webhook for the scout to POST error messages
+    'webhook' : 'https://<url>.<goes>.<here>/...'
 }
