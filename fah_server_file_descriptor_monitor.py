@@ -3,7 +3,7 @@
 # Follow the amount of file descriptors used by the F@H server.
 
 import datetime
-from subprocess import Popen, check_output, PIPE
+from subprocess import check_output
 from error_reporting_bot import post_message
 
 
@@ -12,9 +12,7 @@ def get_pid(name):
 
 
 def get_file_descriptor_count(process_pid):
-    ls_process = Popen(
-        ['ls', '-1q', '/proc/{}/fd'.format(process_pid)], stdout=PIPE)
-    wc_out, _ = Popen(['wc', '-l'], stdin=ls_process.stdout).communicate()
+    wc_out = check_output('ls -1q /proc/{}/fd | wc -l'.format(process_pid), shell=True)
     return wc_out.rstrip()
 
 
