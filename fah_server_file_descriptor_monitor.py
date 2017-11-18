@@ -23,7 +23,7 @@ def main():
     fah_work_file_descriptor_count = get_file_descriptor_count(fah_work_pid)
     with open('/home/server/server2/fah-work-fd-count.log', 'a') as fd_log_file:
         fd_log_file.write(
-            '{0:5}{1}'.format(fah_work_file_descriptor_count, current_date_time))
+            '{0:5}{1}\n'.format(fah_work_file_descriptor_count, current_date_time))
 
 if __name__ == '__main__':
     main()
