@@ -27,9 +27,13 @@ def main():
             sys.exit()
         fah_work_pid = fah_work_pid.rstrip()
         current_date_time = str(datetime.datetime.now()).replace(' ', '-')
-        fah_work_file_descriptor_count = get_file_descriptor_count(fah_work_pid)
-        with open('/home/server/server2/fah-work-fd-count.log', 'a') as fd_log_file:
-            fd_log_file.write('{0:5}{1}\n'.format(fah_work_file_descriptor_count, current_date_time))
+        try:
+            fah_work_file_descriptor_count = get_file_descriptor_count(fah_work_pid)
+            with open('/home/server/server2/fah-work-fd-count.log', 'a') as fd_log_file:
+                fd_log_file.write('{0:5}{1}\n'.format(fah_work_file_descriptor_count, current_date_time))
+        except CalledProcessError:
+            pass
+        time.sleep(60)
 
 if __name__ == '__main__':
     main()
