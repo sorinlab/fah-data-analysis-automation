@@ -3,7 +3,8 @@
 # Follow the amount of file descriptors used by the F@H server.
 
 import datetime
-from subprocess import check_output
+import sys
+from subprocess import check_output, CalledProcessError
 from error_reporting_bot import post_message
 
 
@@ -17,8 +18,12 @@ def get_file_descriptor_count(process_pid):
 
 
 def main():
-    fah_work_pid = get_pid('fah-work').rstrip()
-    assert fah_work_pid, post_message('[ERROR] WS on folding1 has shutdown!')
+    try:
+        fah_work_pid = get_pid('fah-work')
+    except CalledProcessError:
+        post_message('[ERROR] WS on folding1 has shutdown!')
+        sys.exit()
+    fah_work_pid = fah_work_pid.rstrip()
     current_date_time = str(datetime.datetime.now()).replace(' ', '-')
     fah_work_file_descriptor_count = get_file_descriptor_count(fah_work_pid)
     with open('/home/server/server2/fah-work-fd-count.log', 'a') as fd_log_file:
