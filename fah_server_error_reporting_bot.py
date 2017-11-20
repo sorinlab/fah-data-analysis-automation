@@ -24,7 +24,7 @@ if __name__ == '__main__':
     for line in loglines:
         if 'Error from accept() call' in line:
             current_time = str(datetime.datetime.now()).replace(' ', '-')
-            netstat_out = subprocess.check_output(['netstat', '-a'])
+            netstat_out = subprocess.check_output(['netstat', '-an'])
             with open('/home/server/server2/{}.netstat.out'.format(current_time), 'w') as netstat_file:
                 netstat_file.write(netstat_out)
             post_message('[ERROR] Folding1 WS process maxed out file descriptors! Send /home/server/server2/{}.netstat.out to the CSULB IT team!'.format(current_time))
