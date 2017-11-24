@@ -187,6 +187,9 @@ for project_name, directory in WORK:
         for f in files:
             if f.endswith(".xtc"):
                 xtc_path = os.path.abspath(os.path.join(root, f))
+                # Do not include WU's that are past the CLONE<#> directory
+                if 'CLONE' not in xtc_path.split('/')[-2]:
+                    continue
                 # Skip WU's that are either queued or finished, otherwise mark
                 # them
                 if xtc_path in CONTINUE_SET:
