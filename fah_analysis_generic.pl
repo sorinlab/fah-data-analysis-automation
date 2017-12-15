@@ -160,7 +160,7 @@ while ($queue_line = shift(@queue_lines)) {
 
 			# define (input) filenames #
 			$xtcfile = "$sandbox_dir/current_frame.xtc";
-			$edrfile = "$sandbox_dir/current_frame.edr"; 
+			$edrfile = "$sandbox_dir/current_frame.edr";
 			$tprfile = "$sandbox_dir/current_frame.tpr";
 			$ndxfile = "$fah_files/proj$pro.ndx";
 			
@@ -182,14 +182,14 @@ while ($queue_line = shift(@queue_lines)) {
 			# for sans inhibitor / PROJ8200 #
 			$in_proj_8200 = ($pro eq "8200") ? 1 : 0;
 			if($in_proj_8200) {
-				system("echo 1 1 | g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdfile");
+				system("echo 1 1 | /usr/local/share/GRO/gromacs-5.0.4/bin/g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdfile");
 			} else {
-				system("echo 1 24 | g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdcomplexfile"); # for complexes
-				system("echo 1 1 | g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdfile"); # for rmsd of protein only
+				system("echo 1 24 | /usr/local/share/GRO/gromacs-5.0.4/bin/g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdcomplexfile"); # for complexes
+				system("echo 1 1 | /usr/local/share/GRO/gromacs-5.0.4/bin/g_rms -s $tprfile -f $xtcfile -n $ndxfile -o $rmsdfile"); # for rmsd of protein only
+        			system("echo 1 20 | /usr/local/share/GRO/gromacs-5.0.4/bin/g_mindist -s $tprfile -f $xtcfile -n $ndxfile -od $mindistfile"); # set this value to 0.0 for PROJ8200 with no inhibitor present
 			}
-			system("echo 1 | g_gyrate -s $tprfile -f $xtcfile -o $gyratefile");
-			system("echo 1 | do_dssp -f $xtcfile -s $tprfile -n $ndxfile -o $dsspfile -sc $dsspcountsfile"); # good for all projects			
-			system("echo 1 20 | g_mindist -s $tprfile -f $xtcfile -n $ndxfile -od $mindistfile"); # set this value to 0.0 for PROJ8200 with no inhibitor present
+			system("echo 1 | /usr/local/share/GRO/gromacs-5.0.4/bin/g_gyrate -s $tprfile -f $xtcfile -o $gyratefile"); # good for all projects
+			system("echo 1 | /usr/local/share/GRO/gromacs-5.0.4/bin/do_dssp -f $xtcfile -s $tprfile -n $ndxfile -o $dsspfile -sc $dsspcountsfile"); # good for all projects			
 			# for vdW and QQ energies #
 			# Set this value to 0.0 for PROJ8200 with no inhibitor present #
 			# 48 and 49 should be named similar to LJ-SR:Protein-DP2 and Coul-SR:Protein-DP2 #
