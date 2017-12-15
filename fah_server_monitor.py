@@ -1,4 +1,4 @@
-# fah_server_error_reporting_bot.py
+# fah_server_monitor.py
 #
 # Follow the F@H log.txt file like tail -f.
 
@@ -24,5 +24,5 @@ if __name__ == '__main__':
     for line in loglines:
         if 'shutdown' in line:
             current_time = str(datetime.datetime.now())
-            post_message('[ERROR] Folding2 WS shutdown!'.format(current_time))
+            post_message('[ERROR] Folding1 WS shutdown!'.format(current_time))
             sys.exit()
