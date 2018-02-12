@@ -1,50 +1,28 @@
 #!/usr/bin/perl
-# This version is designed to run in the server2/analysis subdirectory
-# This file inserts projects into the projectlist database on the sql server
+
+# This script is designed to run in the server2/analysis directory
+# It inserts projects into the projectlist database on the SQL server
 
 
 use DBI;
 
-$input = "\n     Usage\:  Add-Project-to-ProjectList.pl [proj\$Number]\n\n";
-$projectNumber = @ARGV[0] or die "$input";
+$input = "\n     Usage\:  Add-Project-to-ProjectList.pl [/path/to/proj#.xml]\n\n";
+$projectXML = @ARGV[0] or die "$input";
 
-$projectXML = $projectNumber . ".xml";
-
-$projectNumber = substr $projectNumber, 4;
-
-$databaseServer = "'banana'";
-
+# Begin DBI constants
+## Change these values to point to the appropriate DB server
+$dbserver = "134.139.52.4:3306";
+$dbServerName = "'banana'";
 $server = `hostname`; 
 chomp $server;
 $server = "'" . $server . "'";
+# End DBI constants
 
-$home_dir = "/home/server/server2";
-chomp($home_dir);
-$config_xml = "$home_dir/config.xml";
 
-# Opening the server xml inorder to find the full path to the projectXML
-open(INFILE, "$config_xml") or die "Can't open the file $config_xml\n";
-while(<INFILE>)
-{
-    $projectFinder = 0;
-    @line = split;
-    if(index($line[1], $projectXML) != -1)
-    {
-        $projectFinder = 1;
-        $projectXML = substr $line[1], 6, -3;
-        print("Project's Full Path Found: " . $projectXML . "\n");
-        last; # Using "last" to exit out of the while loop
-    }
-}
-if($projectFinder == 0)
-{
-    print("Sory Project XML: " . $projectXML . " is not found \n");
-    die;
-}
-close(INFILE);
-
-# If full path is found, open the ProjectXML to set the variables
-open(INFILE, "$home_dir/$projectXML") or die "Can't open the file $projectXML\n";
+# Open the ProjectXML to obtain the project's
+# description, type, number of runs, clones, and atoms
+# These values are then used for creating an entry in the table
+open(INFILE, "$projectXML") or die "Can't open the file $projectXML\n";
 $projType_Finder = 0;
 while(my $line = <INFILE>)
 {
@@ -79,18 +57,15 @@ if($projType_Finder == 0)
     die;
 }
 
-# Use below line to test variables output (For Debugging)
-#print($description . "\n" . $projType . "\n" . $numberOfRun . "\n" . $numberOfClone . "\n" . $numberOfAtoms . "\n");
+# Use line below to test variables (Useful For Debugging)
+#print($description . "\n" . $projType . "\n" . $numberOfRun . "\n" . $numberOfClone . "\n" . $numberOfAtoms . "\n"); die;
 
-
-
-############ DO NOT MAKE CHANGES UNLESS YOU KNOW WHAT TO DO ####################
-# Connecting to the Database Server Hosted by Banana
-$dbserver = "134.139.52.4:3306";
+############ DO NOT MAKE CHANGES UNLESS YOU KNOW WHAT YOU ARE DOING ####################
+# Connecting to the Database Server Hosted at $dbserver
 my $dbh = DBI->connect("DBI:mysql:mysql:$dbserver",server,"") or print STDERR "Can't connect to mysql database on $dbserver\nTry giving this server permissions\n";
 print "Database connection established\n";
 
-# Once Connected, Insert Specific Project into the ProjectList
+# Once Connected, Insert Specific Project into ProjectList
 $statement = $dbh->prepare("USE ProjectList");
 $statement->execute() or die "Could not use ProjectList Database: " . $statement->errstr();
 $statement = $dbh->prepare("INSERT INTO ProjectList
@@ -108,7 +83,7 @@ $statement = $dbh->prepare("INSERT INTO ProjectList
                                     (
                                         $projectNumber,
                                         $projType,
-                                        $databaseServer,
+                                        $dbServerName,
                                         $server,
                                         $numberOfRun,
                                         $numberOfClone,
