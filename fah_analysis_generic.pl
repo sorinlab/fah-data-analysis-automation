@@ -248,8 +248,8 @@ while ($queue_line = shift(@queue_lines)) {
 				}
 			} else {
 				unless(open $RMS_COMPLEX,"<", $rmsdcomplexfile) {
-					print $LOG "[ERROR] When attempting to open $rmsdcomplexfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 					if ($failure == 0) {
+						print $LOG "[ERROR] When attempting to open $rmsdcomplexfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 						print $FAILED_WU $queue_line . "\n";
 						$failure = 1;
 						$failure_description = $failure_description . "unable to open rmsd_complex.xvg.";
@@ -285,8 +285,8 @@ while ($queue_line = shift(@queue_lines)) {
 				}
 			} else {
 				unless(open $MINDIST,"<", $mindistfile) {
-					print $LOG "[ERROR] When attempting to open $mindistfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 					if ($failure == 0) {
+						print $LOG "[ERROR] When attempting to open $mindistfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 						print $FAILED_WU $queue_line . "\n";
 						$failure = 1;
 						$failure_description = $failure_description . "unable to open mindist.xvg.";
@@ -317,8 +317,8 @@ while ($queue_line = shift(@queue_lines)) {
 
 			# get rg's #
 			unless(open $RG,"<", $gyratefile) {
-				print $LOG "[ERROR] When attempting to open $gyratefile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 				if ($failure == 0) {
+					print $LOG "[ERROR] When attempting to open $gyratefile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 					print $FAILED_WU $queue_line . "\n";
 					$failure = 1;
 					$failure_description = $failure_description . "unable to open gyrate.xvg.";
@@ -354,8 +354,8 @@ while ($queue_line = shift(@queue_lines)) {
 				}
 			} else {
 				unless(open $ENERGY,"<", $energyfile) {
-					print $LOG "[ERROR] When attempting to open $energyfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 					if ($failure == 0) {
+						print $LOG "[ERROR] When attempting to open $energyfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 						print $FAILED_WU $queue_line . "\n";
 						$failure = 1;
 						$failure_description = $failure_description . "unable to open $energyfile.";
@@ -392,8 +392,8 @@ while ($queue_line = shift(@queue_lines)) {
 				$insert_data{$key}[6] = '';
 			}
 			unless(open $DSSP,"<", $dsspfile) {
-				print $LOG "[ERROR] When attempting to open $dsspfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 				if ($failure == 0) {
+					print $LOG "[ERROR] When attempting to open $dsspfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 					print $FAILED_WU $queue_line . "\n";
 					$failure = 1;
 					$failure_description = $failure_description . "unable to open $dsspfile.";
@@ -438,8 +438,8 @@ while ($queue_line = shift(@queue_lines)) {
 
 			# get Nhelix, Nbeta, and Nccoil #
 			unless(open $DSSP_COUNTS,"<", $dsspcountsfile) {
-				print $LOG "[ERROR] When attempting to open $dsspcountsfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 				if ($failure == 0) {
+					print $LOG "[ERROR] When attempting to open $dsspcountsfile for xtc=$work_unit. Writing entry into $failedWU and moving on...\n";
 					print $FAILED_WU $queue_line . "\n";
 					$failure = 1;
 					$failure_description = $failure_description . "unable to open $dsspcountsfile.";
@@ -484,10 +484,12 @@ while ($queue_line = shift(@queue_lines)) {
 				print $LOG "Obtained data points for all attributes, inserting into database...\n";
 				# Connecting to the db hosted on banana #
 				my $dbh = DBI->connect("DBI:mysql:$project_name:$dbserver","server","", { AutoCommit => 0 }) or do {
-					print $LOG "[ERROR] Can't connect to mysql database on $dbserver.\n";
+					print $LOG "[ERROR] Can't connect to mysql database on $dbserver. Unsetting lock, and exiting...\n";
 					close($LOG);
+					close($FAILED_WU);
 					close($WORK_FINISHED);
 					exit_on_error($sandbox_dir, $queue, @queue_lines);
+					system("rm $tmp_dir/*");
 					system("rm $lock");
 					die;
 				};
@@ -523,8 +525,10 @@ while ($queue_line = shift(@queue_lines)) {
 					$dbh->commit() or do {
 						print $LOG "[ERROR] On committing data to database. Unsetting lock, and exiting...\n";
 						close($LOG);
+						close($FAILED_WU);
 						close($WORK_FINISHED);
 						exit_on_error($sandbox_dir, $queue, @queue_lines);
+						system("rm $tmp_dir/*");
 						system("rm $lock");
 						die;
 					};
@@ -539,33 +543,51 @@ while ($queue_line = shift(@queue_lines)) {
 				} else {
 					$dbh->prepare("INSERT INTO ${project_name}_Error (proj, run, clone, frame, descrp) VALUES($pro, $r, $cln, $f, $failure_description)")->execute();
 					$dbh->commit();
+					print $LOG "Successfully inserted WU=$work_unit into the ${project_name}_Error table\n";
 					# Clear sandbox #
 					system("rm $sandbox_dir/*");
 					# Clear tmp #
 					system("rm $tmp_dir/*");
 				}
 			} else {
+				print $LOG "An analysis of WU=$work_unit failed. Inserting error into the ${project_name}_Error table...\n";
+				# Connecting to the db hosted on banana #
+				my $dbh = DBI->connect("DBI:mysql:$project_name:$dbserver","server","", { AutoCommit => 0 }) or do {
+					print $LOG "[ERROR] Can't connect to mysql database on $dbserver.\n";
+					close($LOG);
+					close($FAILED_WU);
+					close($WORK_FINISHED);
+					exit_on_error($sandbox_dir, $queue, @queue_lines);
+					system("rm $tmp_dir/*");
+					system("rm $lock");
+					die;
+				};
+				print $LOG "Database connection established\n";
 				$dbh->prepare("INSERT INTO ${project_name}_Error (proj, run, clone, frame, descrp) VALUES($pro, $r, $cln, $f, $failure_description)")->execute();
 				$dbh->commit();
+				print $LOG "Successfully inserted WU=$work_unit into the ${project_name}_Error table\n";
 				# Clear sandbox #
 				system("rm $sandbox_dir/*");
 				# Clear tmp #
 				system("rm $tmp_dir/*");
-				next;
 			}
 		} else {
 			print $LOG "[ERROR] MISSING EDR=$edr or TPR=$tpr. Unsetting lock and exiting...\n";
 			close($LOG);
+			close($FAILED_WU);
 			close($WORK_FINISHED);
 			exit_on_error($sandbox_dir, $queue, @queue_lines);
+			system("rm $tmp_dir/*");
 			system("rm $lock");
 			die;
 		}
 	} else {
 		print $LOG "[ERROR] MISSING XTC=$work_unit. Unsetting lock and exiting...\n";
 		close($LOG);
+		close($FAILED_WU);
 		close($WORK_FINISHED);
 		exit_on_error($sandbox_dir, $queue, @queue_lines);
+		system("rm $tmp_dir/*");
 		system("rm $lock");
 		die;
 	}
@@ -574,6 +596,7 @@ while ($queue_line = shift(@queue_lines)) {
 open my $QUEUE_CLEAR, ">", $queue or do {
 	print $LOG "[ERROR] Unable to clear queue. This error is unexpected and should be investigated. Unsetting lock and exiting...\n";
 	close($LOG);
+	close($FAILED_WU);
 	close($WORK_FINISHED);
 	system("rm $lock");
 	die;
@@ -582,6 +605,7 @@ close($QUEUE_CLEAR);
 print $LOG "Cleared the queue.\n";
 close($WORK_FINISHED);
 print $LOG "Anylsis complete. Exiting...\n";
+close($FAILED_WU);
 close($LOG);
 system("rm $lock");
 exit;
