@@ -30,6 +30,9 @@ SCOUT_CONFIGURATION = {
     # Path to work completed log
     # If a to-be-analyzed frame exists in work_completed do not queue
     'work_completed': '/home/server/server2/analysis/done.txt',
+    # Path to failed WU log
+    # If a to-be-analyzed frame exists in failed_wu do not queue
+    'failed_wu': '/home/server/server2/analysis/failed_WU.txt',
     # Path to file that logs events that occur during normal operation
     'log' : '/home/server/server2/analysis/scout-logs/scout.log',
     # Path to file that logs errors regarding a particular runtime event

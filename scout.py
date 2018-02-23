@@ -34,6 +34,9 @@ from error_reporting_bot import post_message
 # Path to work completed log
 # If a to-be-analyzed frame exists in work_completed do not queue
 #     'work_completed': '/.../done.txt',
+# Path to failed WU log
+# If a to-be-analyzed frame exists in failed_wu do not queue
+#      'failed_wu': '/home/server/server2/analysis/failed_WU.txt',
 # Path to file that logs events that occur during normal operation
 #     'log' : '/.../scout.log',
 # Path to file that logs errors regarding a particular runtime event
@@ -57,6 +60,7 @@ def setup_logger(name, log_file, level=logging.INFO):
     logger.addHandler(handler)
 
     return logger
+
 
 # Set up info and error logs
 try:
@@ -152,11 +156,44 @@ for line in WORK_COMPLETED_LINES:
 # Deallocate list of finished job entries from memory
 del WORK_COMPLETED_LINES
 
-# Take union of work completed and queue to make a set of "ignorables"
-CONTINUE_SET = WORK_QUEUED_SET.union(WORK_COMPLETED_SET)
+# Make a dictionary of all the failed WU's
+# This will be used to prevent reentering failed WU's into queue
+FAILED_WU = SC['failed_wu']
+if os.path.isfile(FAILED_WU):
+    LOG.info(': Opening failed_wu file and creating dictionary.')
+else:
+    ERROR_LOG.info(
+        ': [ERROR] The failed_wu file %s does not exist. Check the configuration for errors regarding the \'failed_wu\' setting.', FAILED_WU)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Unsetting lock and exiting...', SC['error_log'])
+    post_message(
+        '[ERROR] in scout.py. The failed_wu file {} does not exist.'.format(FAILED_WU))
+    os.unlink(LOCK)
+    sys.exit(1)
+try:
+    with open(FAILED_WU, mode='r') as failed_wu_log:
+        FAILED_WU_LINES = failed_wu_log.readlines()
+except IOError as err:
+    ERROR_LOG.info(
+        ': [ERROR] I/O Error(%d): %s. Occurred when attempting to open failed_wu=%s. Check the configuration for errors regarding the \'failed_wu\' setting.', err.errno, err.strerror, FAILED_WU)
+    LOG.warning(
+        ': [WARNING] The scout is terminating due to a critical error. Please see %s for more information. Exiting...', SC['error_log'])
+    post_message('[ERROR] in scout.py. I/O Error({}): {}. Occurred when attempting to open failed_wu={}.'.format(
+        err.errno, err.strerror, FAILED_WU))
+    os.unlink(LOCK)
+    sys.exit(1)
+FAILED_WU_SET = set()
+for line in FAILED_WU_LINES:
+    (_, xtc_path) = line.split()
+    FAILED_WU_SET.add(xtc_path)
+# Deallocate list of failed job entries from memory
+del FAILED_WU_LINES
+
+# Take union of work completed, queue, and failed to make a set of "ignorables"
+CONTINUE_SET = WORK_QUEUED_SET.union(WORK_COMPLETED_SET).union(FAILED_WU_SET)
 
 # Deallocate work completed/queued sets
-del WORK_COMPLETED, WORK_QUEUED_SET
+del WORK_COMPLETED_SET, WORK_QUEUED_SET, FAILED_WU_SET
 
 # Based off the scout configuration,
 # determine which data to scout and
